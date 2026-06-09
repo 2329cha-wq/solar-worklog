@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0F2027">
+<title>태양광 작업일지</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --sun: #F5A623;--sun-light: #FFD580;--sky: #1A6B8A;--sky-dark: #0F2027;
+  --sky-mid: #1C3A4A;--panel: #112233;--surface: #162840;--surface2: #1E3550;
+  --border: rgba(245,166,35,0.2);--text: #E8F4F8;--text-dim: #7A9BAE;
+  --green: #27AE60;--red: #E74C3C;--radius: 12px;--radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-dark);color:var(--text);min-height:100vh;overflow-x:hidden}
+.app-header{background:linear-gradient(135deg,var(--sky-dark) 0%,var(--sky-mid) 100%);border-bottom:1px solid var(--border);padding:16px 20px 12px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
+.app-logo{display:flex;align-items:center;gap:10px}
+.sun-icon{width:36px;height:36px;background:radial-gradient(circle,var(--sun-light) 30%,var(--sun) 70%);border-radius:50%;box-shadow:0 0 16px rgba(245,166,35,0.6);flex-shrink:0}
+.app-title{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
+.app-subtitle{font-size:11px;color:var(--text-dim);margin-top:1px}
+.header-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;cursor:pointer;font-weight:600}
+.tab-nav{display:flex;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tab-nav::-webkit-scrollbar{display:none}
+.tab-btn{flex:1;min-width:72px;padding:12px 8px;background:none;border:none;color:var(--text-dim);font-size:11px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap}
+.tab-btn .tab-icon{font-size:18px}
+.tab-btn.active{color:var(--sun);border-bottom-color:var(--sun)}
+.view{display:none;padding:20px;max-width:680px;margin:0 auto}
+.view.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:700;color:var(--sun);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;color:var(--text-dim);margin-bottom:6px;display:block;font-weight:600}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:10px 12px;outline:none;transition:border-color 0.2s;font-family:inherit}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--sun)}
+.form-select option{background:var(--surface2)}
+.form-textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{padding:12px 20px;border-radius:var(--radius-sm);border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--sun);color:var(--sky-dark)}
+.btn-primary:hover{background:var(--sun-light)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:var(--red);color:white}
+.btn-green{background:var(--green);color:white}
+.btn-full{width:100%;justify-content:center}
+.btn-sm{padding:7px 12px;font-size:12px}
+.log-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color 0.2s}
+.log-item:hover{border-color:var(--sun)}
+.log-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.log-date{font-size:13px;font-weight:700;color:var(--sun)}
+.log-category{font-size:12px;color:var(--text-dim)}
+.log-detail{font-size:13px;color:var(--text);margin-top:4px}
+.log-manday{display:inline-block;background:rgba(245,166,35,0.15);color:var(--sun);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin-top:6px}
+.log-photos{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.log-photo-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+.photo-upload-area{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;color:var(--text-dim);font-size:13px}
+.photo-upload-area:hover{border-color:var(--sun);color:var(--sun)}
+.photo-preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.photo-preview-item{position:relative;aspect-ratio:1}
+.photo-preview-item img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.photo-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.summary-table{width:100%;border-collapse:collapse;font-size:13px}
+.summary-table th{background:var(--surface2);color:var(--sun);font-size:11px;padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)}
+.summary-table td{padding:10px 8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.05)}
+.summary-table tr:hover td{background:rgba(255,255,255,0.03)}
+.summary-table .total-row td{color:var(--sun);font-weight:700;border-top:1px solid var(--border)}
+.category-badge{display:inline-block;background:rgba(26,107,138,0.3);color:#7EC8E3;border-radius:4px;padding:2px 8px;font-size:11px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-value{font-size:28px;font-weight:700;color:var(--sun)}
+.stat-label{font-size:11px;color:var(--text-dim);margin-top:4px}
+.work-type-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:8px;border:1px solid var(--border)}
+.work-type-name{font-size:13px}
+.work-type-cat{font-size:11px;color:var(--text-dim);margin-top:2px}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar .form-input{flex:1;min-width:120px}
+.loading{text-align:center;padding:40px;color:var(--text-dim)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--sun);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.error{border-color:var(--red);color:var(--red)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--panel);border-radius:var(--radius) var(--radius) 0 0;width:100%;max-width:680px;max-height:92vh;overflow-y:auto;padding:24px 20px;border-top:1px solid var(--border)}
+.modal-title{font-size:16px;font-weight:700;color:var(--sun);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer}
+.setting-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-dim)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-text{font-size:14px}
+.config-warning{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.4);border-radius:var(--radius);padding:16px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--sun)}
+@media(min-width:480px){.tab-btn{font-size:12px}.stat-grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-logo">
+    <div class="sun-icon"></div>
+    <div>
+      <div class="app-title">태양광 작업일지</div>
+      <div class="app-subtitle" id="site-name-header">현장을 선택하세요</div>
+    </div>
+  </div>
+  <button class="header-btn" onclick="openExportModal()">📊 내보내기</button>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('dashboard')" id="tab-dashboard"><span class="tab-icon">📊</span>대시보드</button>
+  <button class="tab-btn" onclick="switchTab('log-list')" id="tab-log-list"><span class="tab-icon">📋</span>작업일지</button>
+  <button class="tab-btn" onclick="switchTab('summary')" id="tab-summary"><span class="tab-icon">📈</span>맨데이집계</button>
+  <button class="tab-btn" onclick="switchTab('work-db')" id="tab-work-db"><span class="tab-icon">🗂️</span>공종DB</button>
+  <button class="tab-btn" onclick="switchTab('settings')" id="tab-settings"><span class="tab-icon">⚙️</span>설정</button>
+</div>
+
+<!-- 대시보드 -->
+<div class="view active" id="view-dashboard">
+  <div id="dashboard-content"><div class="loading"><div class="spinner"></div>로딩 중...</div></div>
+</div>
+
+<!-- 작업일지 목록 -->
+<div class="view" id="view-log-list">
+  <div class="filter-bar">
+    <input type="date" class="form-input" id="filter-date-from">
+    <input type="date" class="form-input" id="filter-date-to">
+    <button class="btn btn-secondary btn-sm" onclick="loadLogs()">🔍</button>
+  </div>
+  <button class="btn btn-primary btn-full" style="margin-bottom:16px" onclick="openLogModal()">＋ 새 작업일지 작성</button>
+  <div id="log-list-content"><div class="loading"><div class="spinner"></div>로딩 중...</div></div>
+</div>
+
+<!-- 맨데이 집계 -->
+<div class="view" id="view-summary">
+  <div class="filter-bar">
+    <input type="date" class="form-input" id="sum-date-from">
+    <input type="date" class="form-input" id="sum-date-to">
+    <button class="btn btn-secondary btn-sm" onclick="loadSummary()">집계</button>
+  </div>
+  <div id="summary-content"><div class="loading"><div class="spinner"></div>로딩 중...</div></div>
+</div>
+
+<!-- 공종 DB -->
+<div class="view" id="view-work-db">
+  <div class="card">
+    <div class="card-title">🗂️ 공종 추가</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">대분류</label><input type="text" class="form-input" id="new-category" placeholder="예: 구조물 설치"></div>
+      <div class="form-group"><label class="form-label">소분류</label><input type="text" class="form-input" id="new-sub-category" placeholder="예: 하부 구조물"></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="addWorkType()">추가</button>
+  </div>
+  <div id="work-type-list"><div class="loading"><div class="spinner"></div>로딩 중...</div></div>
+</div>
+
+<!-- 설정 -->
+<div class="view" id="view-settings">
+  <div class="card">
+    <div class="card-title">⚙️ Supabase 연결 설정</div>
+    <div class="form-group"><label class="form-label">Project URL</label><input type="text" class="form-input" id="sb-url" placeholder="https://xxxx.supabase.co"></div>
+    <div class="form-group"><label class="form-label">Anon Key</label><input type="text" class="form-input" id="sb-key" placeholder="eyJh..."></div>
+    <button class="btn btn-primary btn-full" onclick="saveConfig()">저장 및 연결</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🏗️ 현장 관리</div>
+    <div id="site-list" style="margin-bottom:14px"></div>
+    <div class="form-group"><label class="form-label">현장명 *</label><input type="text" class="form-input" id="new-site-name" placeholder="예: ○○ 태양광 발전소 설치공사"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">발주처</label><input type="text" class="form-input" id="new-site-client"></div>
+      <div class="form-group"><label class="form-label">시공사</label><input type="text" class="form-input" id="new-site-contractor"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">착공일</label><input type="date" class="form-input" id="new-site-start"></div>
+      <div class="form-group"><label class="form-label">준공예정일</label><input type="date" class="form-input" id="new-site-end"></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="addSite()">현장 추가</button>
+  </div>
+</div>
+
+<!-- 작업일지 작성 모달 -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="log-modal-title">📝 작업일지 작성</span>
+      <button class="modal-close" onclick="closeLogModal()">✕</button>
+    </div>
+    <input type="hidden" id="log-edit-id">
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">작업일자 *</label><input type="date" class="form-input" id="log-date"></div>
+      <div class="form-group"><label class="form-label">날씨</label>
+        <select class="form-select" id="log-weather">
+          <option>☀️ 맑음</option><option>⛅ 구름</option><option>🌧️ 비</option>
+          <option>❄️ 눈</option><option>🌫️ 흐림</option><option>💨 바람</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">현장</label><select class="form-select" id="log-site"></select></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">공종 (대분류) *</label>
+        <select class="form-select" id="log-category" onchange="filterSubCategory()"><option value="">선택</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">세부공종 (소분류) *</label>
+        <select class="form-select" id="log-sub-category"><option value="">선택</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">세부 작업내용</label>
+      <textarea class="form-textarea" id="log-detail" placeholder="오늘 작업한 내용을 상세히 입력하세요"></textarea>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label class="form-label">투입인원</label><input type="number" class="form-input" id="log-workers" min="1" placeholder="명"></div>
+      <div class="form-group"><label class="form-label">작업시간(h)</label><input type="number" class="form-input" id="log-hours" min="1" max="24" value="8"></div>
+      <div class="form-group"><label class="form-label">맨데이 (자동)</label><input type="number" class="form-input" id="log-manday" step="0.1" style="color:var(--sun)"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">시작시간</label><input type="time" class="form-input" id="log-start-time" value="08:00"></div>
+      <div class="form-group"><label class="form-label">종료시간</label><input type="time" class="form-input" id="log-end-time" value="17:00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">확인자</label><input type="text" class="form-input" id="log-manager"></div>
+      <div class="form-group"><label class="form-label">특이사항</label><input type="text" class="form-input" id="log-memo"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">현장 사진</label>
+      <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">📷 사진을 탭하여 추가 (여러 장 가능)</div>
+      <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(event)">
+      <div class="photo-preview-grid" id="photo-preview"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeLogModal()">취소</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveLog()">💾 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 내보내기 모달 -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal">
+    <div class="modal-title">📊 데이터 내보내기<button class="modal-close" onclick="document.getElementById('export-modal').classList.remove('open')">✕</button></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">시작일</label><input type="date" class="form-input" id="export-from"></div>
+      <div class="form-group"><label class="form-label">종료일</label><input type="date" class="form-input" id="export-to"></div>
+    </div>
+    <button class="btn btn-green btn-full" onclick="exportCSV()">📥 CSV 다운로드 (엑셀에서 열기 가능)</button>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-full" onclick="exportJSON()">📥 JSON 다운로드</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let supabase=null,workTypes=[],sites=[],selectedPhotos=[],currentSiteId=null;
+
+function loadConfig(){
+  const url=localStorage.getItem('sb_url'),key=localStorage.getItem('sb_key');
+  if(url)document.getElementById('sb-url').value=url;
+  if(key)document.getElementById('sb-key').value=key;
+  if(url&&key){initSupabase(url,key);return true;}
+  return false;
+}
+function initSupabase(url,key){supabase=window.supabase.createClient(url,key);}
+function saveConfig(){
+  const url=document.getElementById('sb-url').value.trim(),key=document.getElementById('sb-key').value.trim();
+  if(!url||!key){showToast('URL과 Key를 입력하세요','error');return;}
+  localStorage.setItem('sb_url',url);localStorage.setItem('sb_key',key);
+  initSupabase(url,key);showToast('연결 설정 저장됨 ✓','success');
+  setTimeout(()=>loadAll(),500);
+}
+
+async function loadAll(){
+  if(!supabase)return;
+  await Promise.all([loadWorkTypes(),loadSites()]);
+  loadDashboard();loadLogs();loadSummary();
+}
+
+window.addEventListener('load',()=>{
+  // Supabase 라이브러리 로딩 확인
+  if(!window.supabase){
+    document.getElementById('dashboard-content').innerHTML='<div class="config-warning">⚠️ 네트워크 오류: 라이브러리를 불러오지 못했습니다. 새로고침해주세요.</div>';
+    return;
+  }
+  document.getElementById('log-workers').addEventListener('input',calcManday);
+  document.getElementById('log-hours').addEventListener('input',calcManday);
+  const ok=loadConfig();
+  if(ok){loadAll();}
+  else{showConfigWarning();switchTab('settings');}
+});
+
+function showConfigWarning(){
+  document.getElementById('dashboard-content').innerHTML=`
+    <div class="config-warning">
+      ⚠️ <strong>Supabase 연결이 필요합니다.</strong><br><br>
+      아래 설정 탭에서 Project URL과 Anon Key를 입력하고<br>
+      <strong>"저장 및 연결"</strong> 버튼을 눌러주세요.
+    </div>`;
+  document.getElementById('log-list-content').innerHTML='';
+  document.getElementById('summary-content').innerHTML='';
+  document.getElementById('work-type-list').innerHTML='';
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+
+async function loadDashboard(){
+  if(!supabase)return;
+  const{data:logs}=await supabase.from('daily_logs').select('*');
+  if(!logs)return;
+  const totalMd=logs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
+  const totalDays=new Set(logs.map(l=>l.work_date)).size;
+  const totalWorkers=logs.reduce((s,l)=>s+parseInt(l.workers||0),0);
+  const recent=logs.filter(l=>(new Date()-new Date(l.work_date))/86400000<=7);
+  const catMap={};
+  logs.forEach(l=>{if(!catMap[l.category])catMap[l.category]=0;catMap[l.category]+=parseFloat(l.manday||0);});
+  const cats=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('dashboard-content').innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-value">${totalMd.toFixed(1)}</div><div class="stat-label">총 맨데이 (인·일)</div></div>
+      <div class="stat-card"><div class="stat-value">${totalDays}</div><div class="stat-label">총 작업일수</div></div>
+      <div class="stat-card"><div class="stat-value">${totalWorkers}</div><div class="stat-label">누적 투입인원</div></div>
+      <div class="stat-card"><div class="stat-value">${recent.length}</div><div class="stat-label">최근 7일 작업</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 공종별 맨데이 TOP 5</div>
+      ${cats.length===0?'<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">데이터 없음</div></div>':
+        cats.map(([cat,md])=>`
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:13px">${cat}</span>
+              <span style="color:var(--sun);font-size:13px;font-weight:700">${md.toFixed(1)} 인·일</span>
+            </div>
+            <div style="background:var(--surface2);border-radius:4px;height:6px">
+              <div style="background:var(--sun);height:6px;border-radius:4px;width:${Math.min(100,totalMd>0?md/totalMd*100:0).toFixed(0)}%"></div>
+            </div>
+          </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">📅 최근 작업일지</div>
+      ${logs.length===0?'<div class="empty-state"><div class="empty-text">작업일지 없음</div></div>':
+        [...logs].sort((a,b)=>b.work_date.localeCompare(a.work_date)).slice(0,3).map(l=>`
+          <div class="log-item">
+            <div class="log-item-header"><span class="log-date">${l.work_date}</span><span>${l.weather||''}</span></div>
+            <div class="log-category">${l.category} > ${l.sub_category}</div>
+            <div class="log-detail">${l.detail||'-'}</div>
+            <span class="log-manday">${l.manday} 인·일 · ${l.workers}명</span>
+          </div>`).join('')}
+    </div>`;
+}
+
+async function loadLogs(){
+  if(!supabase)return;
+  let q=supabase.from('daily_logs').select('*,photos(id,url)').order('work_date',{ascending:false});
+  const from=document.getElementById('filter-date-from')?.value,to=document.getElementById('filter-date-to')?.value;
+  if(from)q=q.gte('work_date',from);
+  if(to)q=q.lte('work_date',to);
+  const{data:logs}=await q;
+  const el=document.getElementById('log-list-content');
+  if(!logs||!logs.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">작업일지가 없습니다.<br>새 작업일지를 작성해보세요.</div></div>`;return;}
+  el.innerHTML=logs.map(l=>`
+    <div class="log-item">
+      <div class="log-item-header">
+        <span class="log-date">${l.work_date}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span>${l.weather||''}</span>
+          <button class="btn btn-secondary btn-sm" onclick="openEditLog(${l.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteLog(${l.id})">🗑</button>
+        </div>
+      </div>
+      <div class="log-category">${l.category} > ${l.sub_category}</div>
+      <div class="log-detail">${l.detail||'-'}</div>
+      <span class="log-manday">${l.manday} 인·일 · ${l.workers||0}명 · ${l.start_time||''} ~ ${l.end_time||''}</span>
+      ${l.memo?`<div style="font-size:12px;color:var(--text-dim);margin-top:6px">📌 ${l.memo}</div>`:''}
+      ${l.site_name?`<div style="font-size:11px;color:var(--text-dim);margin-top:4px">🏗️ ${l.site_name}</div>`:''}
+      ${l.photos&&l.photos.length?`<div class="log-photos">${l.photos.map(p=>`<img class="log-photo-thumb" src="${p.url}" onclick="window.open('${p.url}','_blank')">`).join('')}</div>`:''}
+    </div>`).join('');
+}
+
+async function loadSummary(){
+  if(!supabase)return;
+  let q=supabase.from('daily_logs').select('*');
+  const from=document.getElementById('sum-date-from')?.value,to=document.getElementById('sum-date-to')?.value;
+  if(from)q=q.gte('work_date',from);
+  if(to)q=q.lte('work_date',to);
+  const{data:logs}=await q;
+  const el=document.getElementById('summary-content');
+  if(!logs||!logs.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-text">집계할 데이터가 없습니다</div></div>`;return;}
+  const catMap={};
+  logs.forEach(l=>{
+    if(!catMap[l.category])catMap[l.category]={subMap:{},days:new Set(),totalMd:0};
+    catMap[l.category].totalMd+=parseFloat(l.manday||0);
+    catMap[l.category].days.add(l.work_date);
+    if(!catMap[l.category].subMap[l.sub_category])catMap[l.category].subMap[l.sub_category]={md:0,days:new Set()};
+    catMap[l.category].subMap[l.sub_category].md+=parseFloat(l.manday||0);
+    catMap[l.category].subMap[l.sub_category].days.add(l.work_date);
+  });
+  const totalMd=logs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
+  const totalDays=new Set(logs.map(l=>l.work_date)).size;
+  let rows='',no=1;
+  Object.entries(catMap).forEach(([cat,data])=>{
+    rows+=`<tr><td colspan="5" style="text-align:left;padding-left:12px;background:var(--surface2)"><span class="category-badge">${cat}</span> <small style="color:var(--text-dim)">${data.totalMd.toFixed(1)} 인·일</small></td></tr>`;
+    Object.entries(data.subMap).forEach(([sub,sd])=>{
+      rows+=`<tr><td>${no++}</td><td style="text-align:left;padding-left:20px">${sub}</td><td>${sd.days.size}</td><td>${sd.md.toFixed(1)}</td><td>${totalMd>0?(sd.md/totalMd*100).toFixed(1):0}%</td></tr>`;
+    });
+  });
+  el.innerHTML=`
+    <div class="stat-grid" style="grid-template-columns:1fr 1fr">
+      <div class="stat-card"><div class="stat-value">${totalMd.toFixed(1)}</div><div class="stat-label">총 맨데이</div></div>
+      <div class="stat-card"><div class="stat-value">${totalDays}</div><div class="stat-label">총 작업일수</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="summary-table">
+        <thead><tr><th>No</th><th>세부공종</th><th>작업일수</th><th>맨데이(인·일)</th><th>비율</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr class="total-row"><td colspan="2">합 계</td><td>${totalDays}</td><td>${totalMd.toFixed(1)}</td><td>100%</td></tr></tfoot>
+      </table>
+    </div>`;
+}
+
+async function loadWorkTypes(){
+  if(!supabase)return;
+  const{data}=await supabase.from('work_types').select('*').order('category');
+  workTypes=data||[];
+  renderWorkTypeList();populateCategorySelect();
+}
+function renderWorkTypeList(){
+  const el=document.getElementById('work-type-list');
+  if(!workTypes.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-text">공종이 없습니다</div></div>';return;}
+  const catMap={};
+  workTypes.forEach(wt=>{if(!catMap[wt.category])catMap[wt.category]=[];catMap[wt.category].push(wt);});
+  el.innerHTML=Object.entries(catMap).map(([cat,items])=>`
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">${cat}</div>
+      ${items.map(wt=>`
+        <div class="work-type-item">
+          <div class="work-type-name">${wt.sub_category}</div>
+          <button class="btn btn-danger btn-sm" onclick="deleteWorkType(${wt.id})">삭제</button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+function populateCategorySelect(){
+  const cats=[...new Set(workTypes.map(wt=>wt.category))];
+  document.getElementById('log-category').innerHTML='<option value="">선택</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+function filterSubCategory(){
+  const cat=document.getElementById('log-category').value;
+  const subs=workTypes.filter(wt=>wt.category===cat);
+  document.getElementById('log-sub-category').innerHTML='<option value="">선택</option>'+subs.map(wt=>`<option value="${wt.sub_category}">${wt.sub_category}</option>`).join('');
+}
+async function addWorkType(){
+  const cat=document.getElementById('new-category').value.trim(),sub=document.getElementById('new-sub-category').value.trim();
+  if(!cat||!sub){showToast('대분류와 소분류를 입력하세요','error');return;}
+  const{error}=await supabase.from('work_types').insert({category:cat,sub_category:sub});
+  if(error){showToast('추가 실패','error');return;}
+  document.getElementById('new-category').value='';document.getElementById('new-sub-category').value='';
+  await loadWorkTypes();showToast('공종 추가됨 ✓','success');
+}
+async function deleteWorkType(id){
+  if(!confirm('이 공종을 삭제할까요?'))return;
+  await supabase.from('work_types').delete().eq('id',id);
+  await loadWorkTypes();showToast('삭제됨','success');
+}
+
+async function loadSites(){
+  if(!supabase)return;
+  const{data}=await supabase.from('sites').select('*').order('created_at');
+  sites=data||[];renderSiteList();populateSiteSelect();
+}
+function renderSiteList(){
+  const el=document.getElementById('site-list');
+  if(!sites.length){el.innerHTML='';return;}
+  el.innerHTML=sites.map(s=>`
+    <div class="work-type-item">
+      <div><div class="work-type-name">${s.name}</div><div class="work-type-cat">${s.client||''} · ${s.start_date||''}</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="selectSite(${s.id},'${s.name.replace(/'/g,"\\'")}')">선택</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSite(${s.id})">삭제</button>
+      </div>
+    </div>`).join('');
+}
+function populateSiteSelect(){
+  const sel=document.getElementById('log-site');
+  sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  if(currentSiteId)sel.value=currentSiteId;
+}
+function selectSite(id,name){
+  currentSiteId=id;
+  document.getElementById('site-name-header').textContent=name;
+  showToast(name+' 선택됨','success');
+}
+async function addSite(){
+  const name=document.getElementById('new-site-name').value.trim();
+  if(!name){showToast('현장명을 입력하세요','error');return;}
+  const{error}=await supabase.from('sites').insert({name,client:document.getElementById('new-site-client').value.trim(),contractor:document.getElementById('new-site-contractor').value.trim(),start_date:document.getElementById('new-site-start').value||null,end_date:document.getElementById('new-site-end').value||null});
+  if(error){showToast('추가 실패','error');return;}
+  ['new-site-name','new-site-client','new-site-contractor','new-site-start','new-site-end'].forEach(id=>document.getElementById(id).value='');
+  await loadSites();showToast('현장 추가됨 ✓','success');
+}
+async function deleteSite(id){
+  if(!confirm('현장을 삭제할까요?'))return;
+  await supabase.from('sites').delete().eq('id',id);
+  await loadSites();showToast('삭제됨','success');
+}
+
+function openLogModal(){
+  document.getElementById('log-modal-title').textContent='📝 작업일지 작성';
+  document.getElementById('log-edit-id').value='';
+  document.getElementById('log-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('log-workers').value='';
+  document.getElementById('log-hours').value='8';
+  document.getElementById('log-manday').value='';
+  document.getElementById('log-detail').value='';
+  document.getElementById('log-memo').value='';
+  document.getElementById('log-manager').value='';
+  document.getElementById('log-category').value='';
+  document.getElementById('log-sub-category').innerHTML='<option value="">선택</option>';
+  document.getElementById('photo-preview').innerHTML='';
+  selectedPhotos=[];
+  if(currentSiteId)document.getElementById('log-site').value=currentSiteId;
+  document.getElementById('log-modal').classList.add('open');
+}
+async function openEditLog(id){
+  const{data:l}=await supabase.from('daily_logs').select('*,photos(*)').eq('id',id).single();
+  if(!l)return;
+  document.getElementById('log-modal-title').textContent='✏️ 작업일지 수정';
+  document.getElementById('log-edit-id').value=id;
+  document.getElementById('log-date').value=l.work_date;
+  document.getElementById('log-weather').value=l.weather||'☀️ 맑음';
+  document.getElementById('log-workers').value=l.workers||'';
+  document.getElementById('log-hours').value='8';
+  document.getElementById('log-manday').value=l.manday||'';
+  document.getElementById('log-detail').value=l.detail||'';
+  document.getElementById('log-memo').value=l.memo||'';
+  document.getElementById('log-manager').value=l.manager||'';
+  document.getElementById('log-start-time').value=l.start_time||'08:00';
+  document.getElementById('log-end-time').value=l.end_time||'17:00';
+  document.getElementById('log-category').value=l.category;
+  filterSubCategory();
+  setTimeout(()=>document.getElementById('log-sub-category').value=l.sub_category,100);
+  selectedPhotos=[];
+  const preview=document.getElementById('photo-preview');preview.innerHTML='';
+  if(l.photos){l.photos.forEach(p=>{const div=document.createElement('div');div.className='photo-preview-item';div.innerHTML=`<img src="${p.url}"><button class="photo-remove" onclick="removeExistingPhoto(${p.id},this.parentNode)">✕</button>`;preview.appendChild(div);});}
+  document.getElementById('log-modal').classList.add('open');
+}
+async function removeExistingPhoto(id,el){await supabase.from('photos').delete().eq('id',id);el.remove();}
+function closeLogModal(){document.getElementById('log-modal').classList.remove('open');selectedPhotos=[];}
+function calcManday(){
+  const w=parseFloat(document.getElementById('log-workers').value)||0,h=parseFloat(document.getElementById('log-hours').value)||8;
+  document.getElementById('log-manday').value=w>0?(w*h/8).toFixed(1):'';
+}
+function handlePhotoSelect(e){
+  Array.from(e.target.files).forEach(f=>{
+    selectedPhotos.push(f);
+    const r=new FileReader();
+    r.onload=ev=>{const div=document.createElement('div');div.className='photo-preview-item';div.innerHTML=`<img src="${ev.target.result}"><button class="photo-remove" onclick="this.parentNode.remove();selectedPhotos[${selectedPhotos.length-1}]=null">✕</button>`;document.getElementById('photo-preview').appendChild(div);};
+    r.readAsDataURL(f);
+  });
+  e.target.value='';
+}
+async function uploadPhotos(logId){
+  for(const file of selectedPhotos.filter(p=>p)){
+    const ext=file.name.split('.').pop(),path=`${logId}/${Date.now()}.${ext}`;
+    const{error}=await supabase.storage.from('worklog-photos').upload(path,file);
+    if(!error){const{data:u}=supabase.storage.from('worklog-photos').getPublicUrl(path);await supabase.from('photos').insert({log_id:logId,url:u.publicUrl});}
+  }
+}
+async function saveLog(){
+  const date=document.getElementById('log-date').value,cat=document.getElementById('log-category').value,sub=document.getElementById('log-sub-category').value,manday=parseFloat(document.getElementById('log-manday').value);
+  if(!date||!cat||!sub||!manday){showToast('날짜, 공종, 맨데이는 필수입니다','error');return;}
+  const wtObj=workTypes.find(wt=>wt.category===cat&&wt.sub_category===sub);
+  const siteId=document.getElementById('log-site').value||null;
+  const payload={work_date:date,work_type_id:wtObj?.id||null,category:cat,sub_category:sub,detail:document.getElementById('log-detail').value,manday,workers:parseInt(document.getElementById('log-workers').value)||null,start_time:document.getElementById('log-start-time').value,end_time:document.getElementById('log-end-time').value,weather:document.getElementById('log-weather').value,manager:document.getElementById('log-manager').value,memo:document.getElementById('log-memo').value,site_name:sites.find(s=>s.id==siteId)?.name||null};
+  const editId=document.getElementById('log-edit-id').value;
+  let logId;
+  if(editId){const{error}=await supabase.from('daily_logs').update(payload).eq('id',editId);if(error){showToast('수정 실패: '+error.message,'error');return;}logId=editId;}
+  else{const{data,error}=await supabase.from('daily_logs').insert(payload).select().single();if(error){showToast('저장 실패: '+error.message,'error');return;}logId=data.id;}
+  if(selectedPhotos.filter(p=>p).length)await uploadPhotos(logId);
+  closeLogModal();showToast('저장 완료 ✓','success');
+  await loadLogs();await loadDashboard();await loadSummary();
+}
+async function deleteLog(id){
+  if(!confirm('이 작업일지를 삭제할까요?'))return;
+  await supabase.from('daily_logs').delete().eq('id',id);
+  await loadLogs();await loadDashboard();await loadSummary();showToast('삭제됨','success');
+}
+
+function openExportModal(){document.getElementById('export-modal').classList.add('open');}
+async function exportCSV(){
+  const{data:logs}=await supabase.from('daily_logs').select('*').order('work_date');
+  if(!logs||!logs.length){showToast('데이터가 없습니다','error');return;}
+  const h=['날짜','현장','대분류','소분류','세부내용','투입인원','맨데이','시작','종료','날씨','확인자','메모'];
+  const rows=logs.map(l=>[l.work_date,l.site_name||'',l.category,l.sub_category,l.detail||'',l.workers||'',l.manday,l.start_time||'',l.end_time||'',l.weather||'',l.manager||'',l.memo||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv='\uFEFF'+[h.join(','),...rows].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`작업일지_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  document.getElementById('export-modal').classList.remove('open');
+}
+async function exportJSON(){
+  const{data:logs}=await supabase.from('daily_logs').select('*,photos(*)').order('work_date');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(logs,null,2)],{type:'application/json'}));
+  a.download=`작업일지_${new Date().toISOString().split('T')[0]}.json`;a.click();
+  document.getElementById('export-modal').classList.remove('open');
+}
+
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;
+  setTimeout(()=>t.className='toast',2500);
+}
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
+</body>
+</html>
