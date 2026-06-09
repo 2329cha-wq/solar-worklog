@@ -517,10 +517,10 @@ function renderWorkTypeList(){
   }).join('');
 }
 function populateCategorySelect(){
-  // workTypes는 이미 sort_order 순으로 정렬됨 - 순서 유지
   const cats=[];
   workTypes.forEach(wt=>{if(!cats.includes(wt.category))cats.push(wt.category);});
-  document.getElementById('log-category').innerHTML='<option value="">선택</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const sel=document.getElementById('log-category');
+  if(sel)sel.innerHTML='<option value="">선택</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 
 // 대분류 추가
@@ -636,9 +636,12 @@ async function moveSub(id,dir){
   await loadWorkTypes();
 }
 function filterSubCategory(){
-  const cat=document.getElementById('log-category').value;
+  const catEl=document.getElementById('log-category');
+  const subEl=document.getElementById('log-sub-category');
+  if(!catEl||!subEl)return;
+  const cat=catEl.value;
   const subs=workTypes.filter(wt=>wt.category===cat);
-  document.getElementById('log-sub-category').innerHTML='<option value="">선택</option>'+subs.map(wt=>`<option value="${wt.sub_category}">${wt.sub_category}</option>`).join('');
+  subEl.innerHTML='<option value="">선택</option>'+subs.map(wt=>`<option value="${wt.sub_category}">${wt.sub_category}</option>`).join('');
 }
 async function addWorkType(){
   const cat=document.getElementById('new-category').value.trim(),sub=document.getElementById('new-sub-category').value.trim();
@@ -673,6 +676,7 @@ function renderSiteList(){
 }
 function populateSiteSelect(){
   const sel=document.getElementById('log-site');
+  if(!sel)return;
   sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   if(currentSiteId)sel.value=currentSiteId;
 }
