@@ -97,6 +97,12 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .empty-icon{font-size:40px;margin-bottom:12px}
 .empty-text{font-size:14px}
 .config-warning{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.4);border-radius:var(--radius);padding:16px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--sun)}
+.work-row{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;position:relative}
+.work-row-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.work-row-num{font-size:11px;font-weight:700;color:var(--sun);background:rgba(245,166,35,0.15);padding:2px 8px;border-radius:10px}
+.work-row-remove{background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:0 4px}
+.cat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cat-actions{display:flex;gap:6px}
 @media(min-width:480px){.tab-btn{font-size:12px}.stat-grid{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
@@ -150,12 +156,11 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 <!-- 공종 DB -->
 <div class="view" id="view-work-db">
   <div class="card">
-    <div class="card-title">🗂️ 공종 추가</div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">대분류</label><input type="text" class="form-input" id="new-category" placeholder="예: 구조물 설치"></div>
-      <div class="form-group"><label class="form-label">소분류</label><input type="text" class="form-input" id="new-sub-category" placeholder="예: 하부 구조물"></div>
+    <div class="card-title">🗂️ 대분류 추가</div>
+    <div style="display:flex;gap:8px">
+      <input type="text" class="form-input" id="new-category" placeholder="새 대분류명 (예: 전기공사)">
+      <button class="btn btn-primary" style="white-space:nowrap" onclick="addCategory()">추가</button>
     </div>
-    <button class="btn btn-primary btn-full" onclick="addWorkType()">추가</button>
   </div>
   <div id="work-type-list"><div class="loading"><div class="spinner"></div>로딩 중...</div></div>
 </div>
@@ -192,6 +197,8 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
       <button class="modal-close" onclick="closeLogModal()">✕</button>
     </div>
     <input type="hidden" id="log-edit-id">
+
+    <!-- 공통 정보 -->
     <div class="form-row">
       <div class="form-group"><label class="form-label">작업일자 *</label><input type="date" class="form-input" id="log-date"></div>
       <div class="form-group"><label class="form-label">날씨</label>
@@ -201,41 +208,69 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">현장</label><select class="form-select" id="log-site"></select></div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">공종 (대분류) *</label>
-        <select class="form-select" id="log-category" onchange="filterSubCategory()"><option value="">선택</option></select>
-      </div>
-      <div class="form-group"><label class="form-label">세부공종 (소분류) *</label>
-        <select class="form-select" id="log-sub-category"><option value="">선택</option></select>
-      </div>
-    </div>
-    <div class="form-group"><label class="form-label">세부 작업내용</label>
-      <textarea class="form-textarea" id="log-detail" placeholder="오늘 작업한 내용을 상세히 입력하세요"></textarea>
-    </div>
-    <div class="form-row-3">
-      <div class="form-group"><label class="form-label">투입인원</label><input type="number" class="form-input" id="log-workers" min="1" placeholder="명"></div>
-      <div class="form-group"><label class="form-label">작업시간(h)</label><input type="number" class="form-input" id="log-hours" min="1" max="24" value="8"></div>
-      <div class="form-group"><label class="form-label">맨데이 (자동)</label><input type="number" class="form-input" id="log-manday" step="0.1" style="color:var(--sun)"></div>
+      <div class="form-group"><label class="form-label">현장</label><select class="form-select" id="log-site"></select></div>
+      <div class="form-group"><label class="form-label">확인자</label><input type="text" class="form-input" id="log-manager"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">시작시간</label><input type="time" class="form-input" id="log-start-time" value="08:00"></div>
       <div class="form-group"><label class="form-label">종료시간</label><input type="time" class="form-input" id="log-end-time" value="17:00"></div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">확인자</label><input type="text" class="form-input" id="log-manager"></div>
-      <div class="form-group"><label class="form-label">특이사항</label><input type="text" class="form-input" id="log-memo"></div>
+    <div class="form-group"><label class="form-label">특이사항 / 메모</label>
+      <input type="text" class="form-input" id="log-memo" placeholder="안전사항, 특이사항 등">
     </div>
-    <div class="form-group">
+
+    <!-- 작업 항목들 (멀티라인) -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <label class="form-label" style="margin:0">📋 작업 항목 *</label>
+      <button class="btn btn-secondary btn-sm" onclick="addWorkRow()">＋ 항목 추가</button>
+    </div>
+    <div id="work-rows"></div>
+
+    <!-- 사진 -->
+    <div class="form-group" style="margin-top:14px">
       <label class="form-label">현장 사진</label>
       <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">📷 사진을 탭하여 추가 (여러 장 가능)</div>
       <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(event)">
       <div class="photo-preview-grid" id="photo-preview"></div>
     </div>
+
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeLogModal()">취소</button>
       <button class="btn btn-primary" style="flex:2" onclick="saveLog()">💾 저장</button>
     </div>
+  </div>
+</div>
+
+<!-- 공종 소분류 추가 모달 -->
+<div class="modal-overlay" id="sub-modal">
+  <div class="modal" style="max-height:50vh">
+    <div class="modal-title">
+      <span id="sub-modal-title">소분류 추가</span>
+      <button class="modal-close" onclick="document.getElementById('sub-modal').classList.remove('open')">✕</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="text" class="form-input" id="new-sub-input" placeholder="소분류명 입력">
+      <button class="btn btn-primary" style="white-space:nowrap" onclick="addSubCategory()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이름 수정 모달 -->
+<div class="modal-overlay" id="edit-name-modal">
+  <div class="modal" style="max-height:40vh">
+    <div class="modal-title">
+      <span>이름 수정</span>
+      <button class="modal-close" onclick="document.getElementById('edit-name-modal').classList.remove('open')">✕</button>
+    </div>
+    <input type="hidden" id="edit-name-id">
+    <input type="hidden" id="edit-name-type">
+    <input type="hidden" id="edit-name-old">
+    <div class="form-group">
+      <label class="form-label">새 이름</label>
+      <input type="text" class="form-input" id="edit-name-value">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveNameEdit()">저장</button>
   </div>
 </div>
 
@@ -285,8 +320,7 @@ window.addEventListener('load',()=>{
     document.getElementById('dashboard-content').innerHTML='<div class="config-warning">⚠️ 네트워크 오류: 라이브러리를 불러오지 못했습니다. 새로고침해주세요.</div>';
     return;
   }
-  document.getElementById('log-workers').addEventListener('input',calcManday);
-  document.getElementById('log-hours').addEventListener('input',calcManday);
+  // 멀티행 방식으로 변경됨
   const ok=loadConfig();
   if(ok){loadAll();}
   else{showConfigWarning();switchTab('settings');}
@@ -433,22 +467,100 @@ async function loadWorkTypes(){
 }
 function renderWorkTypeList(){
   const el=document.getElementById('work-type-list');
-  if(!workTypes.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-text">공종이 없습니다</div></div>';return;}
+  if(!workTypes.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-text">대분류를 추가해보세요</div></div>';return;}
   const catMap={};
   workTypes.forEach(wt=>{if(!catMap[wt.category])catMap[wt.category]=[];catMap[wt.category].push(wt);});
   el.innerHTML=Object.entries(catMap).map(([cat,items])=>`
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">${cat}</div>
+      <div class="cat-header">
+        <div style="font-size:14px;font-weight:700;color:var(--sun)">${cat}</div>
+        <div class="cat-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openSubModal('${cat.replace(/'/g,"\'")}')">＋ 소분류</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditCat('${cat.replace(/'/g,"\'")}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCategory('${cat.replace(/'/g,"\'")}')">🗑</button>
+        </div>
+      </div>
       ${items.map(wt=>`
         <div class="work-type-item">
           <div class="work-type-name">${wt.sub_category}</div>
-          <button class="btn btn-danger btn-sm" onclick="deleteWorkType(${wt.id})">삭제</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" onclick="openEditSub(${wt.id},'${wt.sub_category.replace(/'/g,"\'")}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteWorkType(${wt.id})">🗑</button>
+          </div>
         </div>`).join('')}
     </div>`).join('');
 }
 function populateCategorySelect(){
   const cats=[...new Set(workTypes.map(wt=>wt.category))];
   document.getElementById('log-category').innerHTML='<option value="">선택</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+
+// 대분류 추가
+async function addCategory(){
+  const cat=document.getElementById('new-category').value.trim();
+  if(!cat){showToast('대분류명을 입력하세요','error');return;}
+  if(workTypes.some(wt=>wt.category===cat)){showToast('이미 있는 대분류입니다','error');return;}
+  const{error}=await sbClient.from('work_types').insert({category:cat,sub_category:'(소분류 없음)'});
+  if(error){showToast('추가 실패','error');return;}
+  document.getElementById('new-category').value='';
+  await loadWorkTypes();showToast('대분류 추가됨 ✓','success');
+}
+
+// 소분류 추가 모달 열기
+let _subModalCat='';
+function openSubModal(cat){
+  _subModalCat=cat;
+  document.getElementById('sub-modal-title').textContent=cat+' > 소분류 추가';
+  document.getElementById('new-sub-input').value='';
+  document.getElementById('sub-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('new-sub-input').focus(),100);
+}
+async function addSubCategory(){
+  const sub=document.getElementById('new-sub-input').value.trim();
+  if(!sub){showToast('소분류명을 입력하세요','error');return;}
+  const{error}=await sbClient.from('work_types').insert({category:_subModalCat,sub_category:sub});
+  if(error){showToast('추가 실패','error');return;}
+  document.getElementById('sub-modal').classList.remove('open');
+  await loadWorkTypes();showToast('소분류 추가됨 ✓','success');
+}
+
+// 대분류 전체 삭제
+async function deleteCategory(cat){
+  if(!confirm(`'${cat}' 대분류와 모든 소분류를 삭제할까요?`))return;
+  await sbClient.from('work_types').delete().eq('category',cat);
+  await loadWorkTypes();showToast('삭제됨','success');
+}
+
+// 이름 수정 모달
+function openEditCat(cat){
+  document.getElementById('edit-name-id').value='';
+  document.getElementById('edit-name-type').value='category';
+  document.getElementById('edit-name-old').value=cat;
+  document.getElementById('edit-name-value').value=cat;
+  document.getElementById('edit-name-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('edit-name-value').focus(),100);
+}
+function openEditSub(id,name){
+  document.getElementById('edit-name-id').value=id;
+  document.getElementById('edit-name-type').value='sub';
+  document.getElementById('edit-name-old').value=name;
+  document.getElementById('edit-name-value').value=name;
+  document.getElementById('edit-name-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('edit-name-value').focus(),100);
+}
+async function saveNameEdit(){
+  const id=document.getElementById('edit-name-id').value;
+  const type=document.getElementById('edit-name-type').value;
+  const oldVal=document.getElementById('edit-name-old').value;
+  const newVal=document.getElementById('edit-name-value').value.trim();
+  if(!newVal){showToast('이름을 입력하세요','error');return;}
+  if(type==='category'){
+    await sbClient.from('work_types').update({category:newVal}).eq('category',oldVal);
+  } else {
+    await sbClient.from('work_types').update({sub_category:newVal}).eq('id',id);
+  }
+  document.getElementById('edit-name-modal').classList.remove('open');
+  await loadWorkTypes();showToast('수정됨 ✓','success');
 }
 function filterSubCategory(){
   const cat=document.getElementById('log-category').value;
@@ -510,21 +622,86 @@ async function deleteSite(id){
   await loadSites();showToast('삭제됨','success');
 }
 
+// 작업 행 추가
+let workRowCount=0;
+function addWorkRow(data={}){
+  workRowCount++;
+  const idx=workRowCount;
+  const cats=[...new Set(workTypes.map(wt=>wt.category))];
+  const catOpts=cats.map(c=>`<option value="${c}" ${data.category===c?'selected':''}>${c}</option>`).join('');
+  const subOpts=data.category?workTypes.filter(wt=>wt.category===data.category).map(wt=>`<option value="${wt.sub_category}" ${data.sub_category===wt.sub_category?'selected':''}>${wt.sub_category}</option>`).join(''):'';
+  const div=document.createElement('div');
+  div.className='work-row';
+  div.id=`work-row-${idx}`;
+  div.innerHTML=`
+    <div class="work-row-header">
+      <span class="work-row-num">작업 ${idx}</span>
+      <button class="work-row-remove" onclick="removeWorkRow(${idx})">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">공종 (대분류) *</label>
+        <select class="form-select" onchange="updateSubOpts(this,${idx})">
+          <option value="">선택</option>${catOpts}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">소분류 *</label>
+        <select class="form-select" id="sub-${idx}">
+          <option value="">선택</option>${subOpts}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">세부 작업내용</label>
+      <textarea class="form-textarea" id="detail-${idx}" style="min-height:60px" placeholder="세부 내용">${data.detail||''}</textarea>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label class="form-label">투입인원</label>
+        <input type="number" class="form-input" id="workers-${idx}" min="1" placeholder="명" value="${data.workers||''}" oninput="calcRowManday(${idx})">
+      </div>
+      <div class="form-group">
+        <label class="form-label">작업시간(h)</label>
+        <input type="number" class="form-input" id="hours-${idx}" min="1" max="24" value="${data.hours||8}" oninput="calcRowManday(${idx})">
+      </div>
+      <div class="form-group">
+        <label class="form-label">맨데이(자동)</label>
+        <input type="number" class="form-input" id="manday-${idx}" step="0.1" style="color:var(--sun)" value="${data.manday||''}">
+      </div>
+    </div>`;
+  document.getElementById('work-rows').appendChild(div);
+}
+function removeWorkRow(idx){
+  const el=document.getElementById(`work-row-${idx}`);
+  if(el)el.remove();
+  if(document.getElementById('work-rows').children.length===0)addWorkRow();
+}
+function updateSubOpts(sel,idx){
+  const cat=sel.value;
+  const subs=workTypes.filter(wt=>wt.category===cat);
+  document.getElementById(`sub-${idx}`).innerHTML='<option value="">선택</option>'+subs.map(wt=>`<option value="${wt.sub_category}">${wt.sub_category}</option>`).join('');
+}
+function calcRowManday(idx){
+  const w=parseFloat(document.getElementById(`workers-${idx}`).value)||0;
+  const h=parseFloat(document.getElementById(`hours-${idx}`).value)||8;
+  document.getElementById(`manday-${idx}`).value=w>0?(w*h/8).toFixed(1):'';
+}
+
 function openLogModal(){
   document.getElementById('log-modal-title').textContent='📝 작업일지 작성';
   document.getElementById('log-edit-id').value='';
   document.getElementById('log-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('log-workers').value='';
-  document.getElementById('log-hours').value='8';
-  document.getElementById('log-manday').value='';
-  document.getElementById('log-detail').value='';
   document.getElementById('log-memo').value='';
   document.getElementById('log-manager').value='';
-  document.getElementById('log-category').value='';
-  document.getElementById('log-sub-category').innerHTML='<option value="">선택</option>';
+  document.getElementById('log-start-time').value='08:00';
+  document.getElementById('log-end-time').value='17:00';
   document.getElementById('photo-preview').innerHTML='';
+  document.getElementById('work-rows').innerHTML='';
+  workRowCount=0;
   selectedPhotos=[];
   if(currentSiteId)document.getElementById('log-site').value=currentSiteId;
+  addWorkRow(); // 기본 1행
   document.getElementById('log-modal').classList.add('open');
 }
 async function openEditLog(id){
@@ -534,28 +711,22 @@ async function openEditLog(id){
   document.getElementById('log-edit-id').value=id;
   document.getElementById('log-date').value=l.work_date;
   document.getElementById('log-weather').value=l.weather||'☀️ 맑음';
-  document.getElementById('log-workers').value=l.workers||'';
-  document.getElementById('log-hours').value='8';
-  document.getElementById('log-manday').value=l.manday||'';
-  document.getElementById('log-detail').value=l.detail||'';
   document.getElementById('log-memo').value=l.memo||'';
   document.getElementById('log-manager').value=l.manager||'';
   document.getElementById('log-start-time').value=l.start_time||'08:00';
   document.getElementById('log-end-time').value=l.end_time||'17:00';
-  document.getElementById('log-category').value=l.category;
-  filterSubCategory();
-  setTimeout(()=>document.getElementById('log-sub-category').value=l.sub_category,100);
+  document.getElementById('work-rows').innerHTML='';
+  workRowCount=0;
+  addWorkRow({category:l.category,sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:8,manday:l.manday||''});
   selectedPhotos=[];
   const preview=document.getElementById('photo-preview');preview.innerHTML='';
   if(l.photos){l.photos.forEach(p=>{const div=document.createElement('div');div.className='photo-preview-item';div.innerHTML=`<img src="${p.url}"><button class="photo-remove" onclick="removeExistingPhoto(${p.id},this.parentNode)">✕</button>`;preview.appendChild(div);});}
+  if(currentSiteId)document.getElementById('log-site').value=currentSiteId;
   document.getElementById('log-modal').classList.add('open');
 }
 async function removeExistingPhoto(id,el){await sbClient.from('photos').delete().eq('id',id);el.remove();}
 function closeLogModal(){document.getElementById('log-modal').classList.remove('open');selectedPhotos=[];}
-function calcManday(){
-  const w=parseFloat(document.getElementById('log-workers').value)||0,h=parseFloat(document.getElementById('log-hours').value)||8;
-  document.getElementById('log-manday').value=w>0?(w*h/8).toFixed(1):'';
-}
+function calcManday(){} // 멀티행으로 대체됨
 function handlePhotoSelect(e){
   Array.from(e.target.files).forEach(f=>{
     selectedPhotos.push(f);
@@ -573,17 +744,57 @@ async function uploadPhotos(logId){
   }
 }
 async function saveLog(){
-  const date=document.getElementById('log-date').value,cat=document.getElementById('log-category').value,sub=document.getElementById('log-sub-category').value,manday=parseFloat(document.getElementById('log-manday').value);
-  if(!date||!cat||!sub||!manday){showToast('날짜, 공종, 맨데이는 필수입니다','error');return;}
-  const wtObj=workTypes.find(wt=>wt.category===cat&&wt.sub_category===sub);
+  const date=document.getElementById('log-date').value;
+  if(!date){showToast('날짜를 입력하세요','error');return;}
   const siteId=document.getElementById('log-site').value||null;
-  const payload={work_date:date,work_type_id:wtObj?.id||null,category:cat,sub_category:sub,detail:document.getElementById('log-detail').value,manday,workers:parseInt(document.getElementById('log-workers').value)||null,start_time:document.getElementById('log-start-time').value,end_time:document.getElementById('log-end-time').value,weather:document.getElementById('log-weather').value,manager:document.getElementById('log-manager').value,memo:document.getElementById('log-memo').value,site_name:sites.find(s=>s.id==siteId)?.name||null};
+  const siteName=sites.find(s=>s.id==siteId)?.name||null;
+  const weather=document.getElementById('log-weather').value;
+  const manager=document.getElementById('log-manager').value;
+  const memo=document.getElementById('log-memo').value;
+  const startTime=document.getElementById('log-start-time').value;
+  const endTime=document.getElementById('log-end-time').value;
+
+  // 작업 행들 수집
+  const rows=document.getElementById('work-rows').children;
+  const payloads=[];
+  for(let i=0;i<rows.length;i++){
+    const row=rows[i];
+    const idx=row.id.replace('work-row-','');
+    const catSel=row.querySelector('select');
+    const cat=catSel?catSel.value:'';
+    const sub=document.getElementById(`sub-${idx}`)?.value||'';
+    const manday=parseFloat(document.getElementById(`manday-${idx}`)?.value)||0;
+    if(!cat||!sub){showToast(`항목 ${parseInt(idx)}의 공종을 선택하세요`,'error');return;}
+    if(!manday){showToast(`항목 ${parseInt(idx)}의 인원/시간을 입력하세요`,'error');return;}
+    const wtObj=workTypes.find(wt=>wt.category===cat&&wt.sub_category===sub);
+    payloads.push({
+      work_date:date,work_type_id:wtObj?.id||null,
+      category:cat,sub_category:sub,
+      detail:document.getElementById(`detail-${idx}`)?.value||'',
+      manday,workers:parseInt(document.getElementById(`workers-${idx}`)?.value)||null,
+      start_time:startTime,end_time:endTime,
+      weather,manager,memo,site_name:siteName
+    });
+  }
+  if(!payloads.length){showToast('작업 항목을 추가하세요','error');return;}
+
   const editId=document.getElementById('log-edit-id').value;
-  let logId;
-  if(editId){const{error}=await sbClient.from('daily_logs').update(payload).eq('id',editId);if(error){showToast('수정 실패: '+error.message,'error');return;}logId=editId;}
-  else{const{data,error}=await sbClient.from('daily_logs').insert(payload).select().single();if(error){showToast('저장 실패: '+error.message,'error');return;}logId=data.id;}
-  if(selectedPhotos.filter(p=>p).length)await uploadPhotos(logId);
-  closeLogModal();showToast('저장 완료 ✓','success');
+  let firstLogId=null;
+
+  if(editId){
+    // 수정 모드: 첫 번째 행만 수정
+    const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',editId);
+    if(error){showToast('수정 실패: '+error.message,'error');return;}
+    firstLogId=editId;
+  } else {
+    // 신규: 모든 행 insert
+    const{data,error}=await sbClient.from('daily_logs').insert(payloads).select();
+    if(error){showToast('저장 실패: '+error.message,'error');return;}
+    firstLogId=data[0].id;
+    // 사진은 첫 번째 레코드에 연결
+  }
+  if(selectedPhotos.filter(p=>p).length)await uploadPhotos(firstLogId);
+  closeLogModal();showToast(`${payloads.length}개 작업 저장 완료 ✓`,'success');
   await loadLogs();await loadDashboard();await loadSummary();
 }
 async function deleteLog(id){
