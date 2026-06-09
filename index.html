@@ -87,7 +87,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .sb-ongoing{background:rgba(245,166,35,0.15);color:var(--sun)}
 /* 계획 카드 */
 .plan-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px}
-.plan-item.completed-early{border-left:3px solid var(--green)}
+.plan-item.completed-early{border-left:3px solid #29B6F6}
 .plan-item.completed-late{border-left:3px solid var(--red)}
 .plan-item.ongoing{border-left:3px solid var(--sun)}
 /* 집계 테이블 */
@@ -316,10 +316,10 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
     </div>
     <div class="fg"><label class="fl">특이사항</label><input type="text" class="fi" id="log-memo"></div>
 
-    <!-- 작업 항목 -->
+    <!-- 대분류 카드 -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <label class="fl" style="margin:0">📋 작업 항목 *</label>
-      <button class="btn bs bsm" onclick="addWorkRow()">＋ 항목 추가</button>
+      <label class="fl" style="margin:0">📋 작업 대분류 *</label>
+      <button class="btn bp bsm" onclick="addCatBlock()">＋ 대분류 추가</button>
     </div>
     <div id="work-rows"></div>
 
@@ -336,8 +336,10 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
     <div class="modal-title">✅ 작업 완료 처리<button class="modal-close" onclick="document.getElementById('complete-modal').classList.remove('open')">✕</button></div>
     <input type="hidden" id="complete-group-id">
     <div id="complete-plan-info" style="margin-bottom:14px"></div>
-    <div class="fg"><label class="fl">실제 총 맨데이</label><input type="number" class="fi" id="complete-actual" step="0.01" placeholder="실제 투입 맨데이"></div>
-    <button class="btn bp bfull" onclick="saveComplete()">완료 처리</button>
+    <div style="background:rgba(41,182,246,0.08);border:1px solid rgba(41,182,246,0.3);border-radius:8px;padding:10px;font-size:12px;color:var(--text-dim);margin-bottom:14px">
+      💡 실적 맨데이는 작업일지에서 자동 집계됩니다. 완료 처리 시 오늘 날짜가 완료일로 기록됩니다.
+    </div>
+    <button class="btn bp bfull" onclick="saveComplete()">✅ 완료 처리</button>
   </div>
 </div>
 
@@ -425,7 +427,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 // ═══════════════════════════════════════════
 // 전역 상태
 // ═══════════════════════════════════════════
-let sbClient=null, workTypes=[], sites=[], selectedPhotos=[], currentSiteId=null, workRowCount=0;
+let sbClient=null, workTypes=[], sites=[], selectedPhotos=[], currentSiteId=null;
 
 // ── 설정 ──
 function loadConfig(){
@@ -564,6 +566,13 @@ async function loadDashboard(){
       <div class="stat-card"><div class="stat-val">${recent7}</div><div class="stat-lbl">최근 7일 작업일</div></div>
     </div>`;
 
+  // 대분류별 실제 맨데이 자동 집계 (작업일지 DB 기준)
+  const actualByCategory={};
+  siteLogs.forEach(l=>{
+    if(!actualByCategory[l.category]) actualByCategory[l.category]=0;
+    actualByCategory[l.category]+=parseFloat(l.manday||0);
+  });
+
   // 작업 계획 vs 실적
   const planHtml=`
     <div class="card">
@@ -573,27 +582,30 @@ async function loadDashboard(){
       </div>
       ${sitePlans.length===0?'<div class="empty"><div class="empty-icon">📭</div>작업 계획을 추가해보세요</div>':
         sitePlans.map(p=>{
-          const actual=parseFloat(p.actual_manday||0);
+          const actual=actualByCategory[p.category]||0;
           const planned=parseFloat(p.planned_manday||0);
           const pct=planned>0?Math.round(actual/planned*100):0;
           let cls='ongoing', badge='<span class="status-badge sb-ongoing">진행중</span>';
           if(p.is_completed){
             cls=actual<=planned?'completed-early':'completed-late';
             badge=actual<=planned
-              ?'<span class="status-badge sb-early">✓ 일정 내 완료</span>'
+              ?'<span class="status-badge sb-early" style="background:rgba(41,182,246,0.2);color:#29B6F6">✓ 일정 내 완료</span>'
               :'<span class="status-badge sb-late">✓ 지연 완료</span>';
           }
+          const completedDateHtml=p.is_completed&&p.completed_at
+            ?`<span style="font-size:11px;color:var(--text-dim);margin-left:6px">완료일: ${p.completed_at}</span>`:''
           return `<div class="plan-item ${cls}">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
-              <div>
-                <div style="font-size:13px;font-weight:700">${p.category}${p.sub_category?' > '+p.sub_category:''}${badge}</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:700">${p.category}${badge}${completedDateHtml}</div>
                 ${p.note?`<div style="font-size:12px;color:var(--text-dim);margin-top:2px">${p.note}</div>`:''}
                 <div style="font-size:12px;color:var(--text-dim);margin-top:4px">
-                  예상 ${planned.toFixed(2)} 인·일 → 실적 ${actual.toFixed(2)} 인·일
-                  ${planned>0?`<span style="color:${pct<=100?'var(--green)':'var(--red)'}"> (${pct}%)</span>`:''}
+                  예상 <strong style="color:var(--sun)">${planned.toFixed(2)}</strong> 인·일 → 실적 <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${actual.toFixed(2)}</strong> 인·일
+                  ${planned>0?`<span style="color:${pct<=100?'#29B6F6':'var(--red)'}"> (${pct}%)</span>`:''}
                 </div>
+                ${!p.is_completed&&actual>0?`<div style="margin-top:6px;background:var(--sky-dark);border-radius:4px;height:5px;overflow:hidden"><div style="height:100%;width:${Math.min(pct,100)}%;background:${pct<=100?'#29B6F6':'var(--red)'};transition:width 0.4s"></div></div>`:''}
               </div>
-              <div style="display:flex;gap:5px">
+              <div style="display:flex;gap:5px;margin-left:8px">
                 ${!p.is_completed?`<button class="btn bg bsm" onclick="openCompleteModal(${p.id},${planned},${actual})">완료</button>`:''}
                 <button class="btn bd bsm" onclick="deletePlan(${p.id})">삭제</button>
               </div>
@@ -655,20 +667,21 @@ async function deletePlan(id){
 // ── 완료 처리 ──
 function openCompleteModal(planId, planned, actual){
   document.getElementById('complete-group-id').value=planId;
-  document.getElementById('complete-actual').value=actual||'';
   document.getElementById('complete-plan-info').innerHTML=`
     <div style="background:var(--surface2);border-radius:8px;padding:10px;font-size:13px">
       예상 맨데이: <strong style="color:var(--sun)">${parseFloat(planned).toFixed(2)} 인·일</strong>
+      &nbsp;→&nbsp; 실적: <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${parseFloat(actual).toFixed(2)} 인·일</strong>
+      <span style="color:${actual<=planned?'#29B6F6':'var(--red)'}"> (${planned>0?Math.round(actual/planned*100):0}%)</span>
     </div>`;
   document.getElementById('complete-modal').classList.add('open');
 }
 async function saveComplete(){
   const planId=document.getElementById('complete-group-id').value;
-  const actual=parseFloat(document.getElementById('complete-actual').value)||0;
-  const{error}=await sbClient.from('work_plans').update({is_completed:true, actual_manday:actual}).eq('id',planId);
+  const today=new Date().toISOString().split('T')[0];
+  const{error}=await sbClient.from('work_plans').update({is_completed:true, completed_at:today}).eq('id',planId);
   if(error){ toast('오류 발생','err'); return; }
   document.getElementById('complete-modal').classList.remove('open');
-  toast('완료 처리됨 ✓','ok'); loadDashboard();
+  toast('완료 처리됨 ✓ ('+today+')','ok'); loadDashboard();
 }
 
 // ═══════════════════════════════════════════
@@ -767,65 +780,163 @@ function toggleLogGroup(header){
 // ═══════════════════════════════════════════
 // 작업일지 작성 - 멀티행
 // ═══════════════════════════════════════════
-function addWorkRow(data={}){
-  workRowCount++;
-  const idx=workRowCount;
+// ── 대분류 카드 방식 작성 ──
+let catBlockCount=0, subRowCount=0;
+
+function addCatBlock(catData={}){
+  catBlockCount++;
+  const cid=catBlockCount;
   const cats=[...new Set(workTypes.map(w=>w.category))];
-  const catOpts=cats.map(c=>`<option value="${c}" ${data.category===c?'selected':''}>${c}</option>`).join('');
-  const subOpts=data.category? workTypes.filter(w=>w.category===data.category).map(w=>`<option value="${w.sub_category}" ${data.sub_category===w.sub_category?'selected':''}>${w.sub_category}</option>`).join('') :'';
+  const catOpts=cats.map(cat=>`<option value="${cat}" ${catData.category===cat?'selected':''}>${cat}</option>`).join('');
   const div=document.createElement('div');
-  div.className='work-row'; div.id=`wr-${idx}`;
+  div.id=`cb-${cid}`;
+  div.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px';
   div.innerHTML=`
-    <div class="work-row-hd">
-      <span class="work-row-num">작업 ${idx}</span>
-      <button class="btn bd bsm" onclick="removeWorkRow(${idx})" style="padding:4px 8px">✕</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <select class="fs cb-cat" id="cbc-${cid}" onchange="onCbCatChange(${cid})" style="flex:1;font-weight:700;color:var(--sun)">
+        <option value="">대분류 선택 *</option>${catOpts}
+      </select>
+      <span id="cb-total-${cid}" style="font-size:12px;color:var(--sun);font-weight:700;white-space:nowrap"></span>
+      <button class="btn bg bsm" id="cb-done-${cid}" onclick="toggleCatDone(${cid})" style="display:none">완료</button>
+      <button class="btn bd bsm" onclick="removeCatBlock(${cid})" style="padding:5px 8px">✕</button>
     </div>
-    <div class="fr">
-      <div class="fg"><label class="fl">대분류 *</label>
-        <select class="fs wr-cat" onchange="updateWrSub(this,${idx})">
-          <option value="">선택</option>${catOpts}
-        </select>
-      </div>
-      <div class="fg"><label class="fl">소분류 *</label>
-        <select class="fs" id="wrs-${idx}"><option value="">선택</option>${subOpts}</select>
-      </div>
-    </div>
-    <div class="fg"><label class="fl">세부 작업내용</label>
-      <textarea class="ft" id="wrd-${idx}" style="min-height:55px" placeholder="세부 내용">${data.detail||''}</textarea>
-    </div>
-    <div class="fr3">
-      <div class="fg"><label class="fl">투입인원</label><input type="number" class="fi" id="wrw-${idx}" min="1" placeholder="명" value="${data.workers||''}" oninput="calcMd(${idx})"></div>
-      <div class="fg"><label class="fl">작업시간(h)</label><input type="number" class="fi" id="wrh-${idx}" min="1" max="24" value="${data.hours||8}" oninput="calcMd(${idx})"></div>
-      <div class="fg"><label class="fl">맨데이(자동)</label><input type="number" class="fi" id="wrm-${idx}" step="0.01" style="color:var(--sun)" value="${data.manday||''}"></div>
-    </div>
-    <div class="fg"><label class="fl">현장 사진 (이 작업항목)</label>
-      <div class="photo-zone" onclick="document.getElementById('ph-${idx}').click()">📷 사진 추가</div>
-      <input type="file" id="ph-${idx}" accept="image/*" multiple style="display:none" onchange="handlePhoto(event,${idx})">
-      <div class="photo-grid" id="pg-${idx}"></div>
+    <div id="cb-subs-${cid}" style="margin-bottom:8px"></div>
+    <button class="btn bs bsm bfull" onclick="addSubRow(${cid})" style="margin-bottom:10px">＋ 소분류 추가</button>
+    <div class="fg" style="margin-bottom:0">
+      <label class="fl">📷 현장 사진 (이 대분류)</label>
+      <div class="photo-zone" onclick="document.getElementById('cbph-${cid}').click()">사진 추가</div>
+      <input type="file" id="cbph-${cid}" accept="image/*" multiple style="display:none" onchange="handleCatPhoto(event,${cid})">
+      <div class="photo-grid" id="cbpg-${cid}"></div>
     </div>`;
   document.getElementById('work-rows').appendChild(div);
-  if(data.category) setTimeout(()=>updateWrSubVal(idx,data.sub_category),50);
+  addSubRow(cid, catData.subs?catData.subs[0]:undefined);
+  if(catData.category){
+    setTimeout(()=>{
+      const sel=document.getElementById(`cbc-${cid}`);
+      if(sel){ sel.value=catData.category; onCbCatChange(cid, catData.subs); }
+    },50);
+  }
 }
 
-function removeWorkRow(idx){
-  document.getElementById(`wr-${idx}`)?.remove();
-  if(!document.getElementById('work-rows').children.length) addWorkRow();
+function removeCatBlock(cid){
+  document.getElementById(`cb-${cid}`)?.remove();
+  delete rowPhotos[`cat-${cid}`];
 }
-function updateWrSub(sel,idx){
-  const cat=sel.value;
+
+function onCbCatChange(cid, existingSubs=null){
+  const cat=document.getElementById(`cbc-${cid}`)?.value;
+  document.querySelectorAll(`#cb-subs-${cid} .sr-cat-sel`).forEach(sel=>{
+    const cur=sel.value;
+    const subs=workTypes.filter(w=>w.category===cat);
+    sel.innerHTML='<option value="">소분류 선택</option>'+subs.map(w=>`<option value="${w.sub_category}" ${w.sub_category===cur?'selected':''}>${w.sub_category}</option>`).join('');
+  });
+  const btn=document.getElementById(`cb-done-${cid}`);
+  if(btn) btn.style.display=cat?'inline-flex':'none';
+  updateCbTotal(cid);
+}
+
+function addSubRow(cid, data={}){
+  subRowCount++;
+  const sid=subRowCount;
+  const cat=document.getElementById(`cbc-${cid}`)?.value||''
   const subs=workTypes.filter(w=>w.category===cat);
-  document.getElementById(`wrs-${idx}`).innerHTML='<option value="">선택</option>'+subs.map(w=>`<option value="${w.sub_category}">${w.sub_category}</option>`).join('');
+  const subOpts=subs.map(w=>`<option value="${w.sub_category}" ${data&&data.sub_category===w.sub_category?'selected':''}>${w.sub_category}</option>`).join('');
+  const div=document.createElement('div');
+  div.id=`sr-${sid}`;
+  div.style.cssText='background:var(--sky-dark);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px';
+  div.innerHTML=`
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <select class="fs sr-cat-sel" id="src-${sid}" style="flex:1">
+        <option value="">소분류 선택</option>${subOpts}
+      </select>
+      <button class="btn bd bsm" onclick="removeSubRow(${sid},${cid})" style="padding:4px 7px">✕</button>
+    </div>
+    <div class="fg" style="margin-bottom:8px">
+      <textarea class="ft" id="srd-${sid}" style="min-height:48px" placeholder="세부 작업내용">${(data&&data.detail)||''}</textarea>
+    </div>
+    <div class="fr3">
+      <div class="fg"><label class="fl">투입인원</label>
+        <input type="number" class="fi" id="srw-${sid}" min="1" placeholder="명" value="${(data&&data.workers)||''}" oninput="calcSrMd(${sid},${cid})">
+      </div>
+      <div class="fg"><label class="fl">작업시간(h)</label>
+        <input type="number" class="fi" id="srh-${sid}" min="0.5" max="24" step="0.5" value="${(data&&data.hours)||8}" oninput="calcSrMd(${sid},${cid})">
+      </div>
+      <div class="fg"><label class="fl">맨데이</label>
+        <input type="number" class="fi" id="srm-${sid}" step="0.01" readonly style="color:var(--sun)" value="${(data&&data.manday)?parseFloat(data.manday).toFixed(2):''}" >
+      </div>
+    </div>`;
+  document.getElementById(`cb-subs-${cid}`).appendChild(div);
 }
-function updateWrSubVal(idx,val){
-  const el=document.getElementById(`wrs-${idx}`);
-  if(el) el.value=val;
+
+function removeSubRow(sid,cid){
+  document.getElementById(`sr-${sid}`)?.remove();
+  updateCbTotal(cid);
 }
-function calcMd(idx){
-  const w=parseFloat(document.getElementById(`wrw-${idx}`)?.value)||0;
-  const h=parseFloat(document.getElementById(`wrh-${idx}`)?.value)||8;
-  const el=document.getElementById(`wrm-${idx}`);
+
+function calcSrMd(sid,cid){
+  const w=parseFloat(document.getElementById(`srw-${sid}`)?.value)||0;
+  const h=parseFloat(document.getElementById(`srh-${sid}`)?.value)||8;
+  const el=document.getElementById(`srm-${sid}`);
   if(el) el.value=w>0?(w*h/8).toFixed(2):'';
+  updateCbTotal(cid);
 }
+
+function updateCbTotal(cid){
+  let total=0;
+  document.querySelectorAll(`#cb-subs-${cid} [id^="srm-"]`).forEach(el=>{ total+=parseFloat(el.value)||0; });
+  const el=document.getElementById(`cb-total-${cid}`);
+  if(el) el.textContent=total>0?`합계 ${total.toFixed(2)} 인·일`:'';
+}
+
+function toggleCatDone(cid){
+  const block=document.getElementById(`cb-${cid}`);
+  if(!block) return;
+  const done=block.dataset.done==='1';
+  block.dataset.done=done?'0':'1';
+  block.style.borderColor=done?'var(--border)':'#29B6F6';
+  const btn=document.getElementById(`cb-done-${cid}`);
+  if(btn){ btn.textContent=done?'완료':'✓ 완료됨'; btn.className=done?'btn bg bsm':'btn bs bsm'; }
+}
+
+// 사진 (대분류별)
+function handleCatPhoto(e,cid){
+  const key=`cat-${cid}`;
+  if(!rowPhotos[key]) rowPhotos[key]=[];
+  Array.from(e.target.files).forEach(f=>{
+    const pidx=rowPhotos[key].length;
+    rowPhotos[key].push(f);
+    const r=new FileReader();
+    r.onload=ev=>{
+      const d=document.createElement('div'); d.className='photo-item';
+      d.innerHTML=`<img src="${ev.target.result}"><button class="photo-rm" onclick="removeCatPhoto('${key}',${pidx},this.parentNode)">✕</button>`;
+      document.getElementById(`cbpg-${cid}`)?.appendChild(d);
+    };
+    r.readAsDataURL(f);
+  });
+  e.target.value='';
+}
+function removeCatPhoto(key,pidx,el){ if(rowPhotos[key]) rowPhotos[key][pidx]=null; el?.remove(); }
+
+async function uploadCatPhotos(logId,cid){
+  const key=`cat-${cid}`;
+  if(!rowPhotos[key]) return;
+  for(const f of rowPhotos[key].filter(p=>p)){
+    const ext=f.name.split('.').pop();
+    const path=`${logId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const{error}=await sbClient.storage.from('worklog-photos').upload(path,f);
+    if(!error){
+      const{data:u}=sbClient.storage.from('worklog-photos').getPublicUrl(path);
+      await sbClient.from('photos').insert({log_id:logId, url:u.publicUrl});
+    }
+  }
+}
+
+// 구버전 호환 (사용 안 하지만 참조 오류 방지)
+function calcMd(){}
+function updateWrSub(){}
+function updateWrSubVal(){}
+function removeWorkRow(){}
+function addWorkRow(){ addCatBlock(); }
 
 // 사진 처리 - 행별
 const rowPhotos={};
@@ -868,13 +979,12 @@ function openLogModal(){
   document.getElementById('log-start').value='08:00';
   document.getElementById('log-end').value='17:00';
   document.getElementById('work-rows').innerHTML='';
-  workRowCount=0;
+  catBlockCount=0; subRowCount=0;
   Object.keys(rowPhotos).forEach(k=>delete rowPhotos[k]);
-  // 현장 드롭다운
   const sel=document.getElementById('log-site');
   sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   if(currentSiteId) sel.value=currentSiteId;
-  addWorkRow();
+  addCatBlock();
   document.getElementById('log-modal').classList.add('open');
 }
 
@@ -890,14 +1000,14 @@ async function openEditLog(id){
   document.getElementById('log-start').value=l.start_time||'08:00';
   document.getElementById('log-end').value=l.end_time||'17:00';
   document.getElementById('work-rows').innerHTML='';
-  workRowCount=0;
+  catBlockCount=0; subRowCount=0;
   Object.keys(rowPhotos).forEach(k=>delete rowPhotos[k]);
   const sel=document.getElementById('log-site');
   sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   if(currentSiteId) sel.value=currentSiteId;
   const _w=parseFloat(l.workers)||0, _md=parseFloat(l.manday)||0;
   const _hours=_w>0?Math.round(_md*8/_w*100)/100:8;
-  addWorkRow({category:l.category,sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_hours,manday:l.manday||''});
+  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_hours,manday:l.manday}]});
   document.getElementById('log-modal').classList.add('open');
 }
 
@@ -913,33 +1023,45 @@ async function saveLog(){
   const memo=document.getElementById('log-memo').value;
   const startTime=document.getElementById('log-start').value;
   const endTime=document.getElementById('log-end').value;
-  const rows=document.getElementById('work-rows').children;
+  // 대분류 카드들 수집
+  const catBlocks=document.querySelectorAll('#work-rows>[id^="cb-"]');
+  if(!catBlocks.length){ toast('대분류를 추가하세요','err'); return; }
   const payloads=[];
-  for(const row of rows){
-    const idx=row.id.replace('wr-','');
-    const catEl=row.querySelector('.wr-cat');
-    const cat=catEl?catEl.value:'';
-    const sub=document.getElementById(`wrs-${idx}`)?.value||'';
-    const md=parseFloat(document.getElementById(`wrm-${idx}`)?.value)||0;
-    if(!cat||!sub){ toast(`항목 ${idx}의 공종을 선택하세요`,'err'); return; }
-    if(!md){ toast(`항목 ${idx}의 인원/시간을 입력하세요`,'err'); return; }
-    payloads.push({work_date:date,category:cat,sub_category:sub,
-      detail:document.getElementById(`wrd-${idx}`)?.value||'',
-      manday:md, workers:parseInt(document.getElementById(`wrw-${idx}`)?.value)||null,
-      start_time:startTime,end_time:endTime,weather,manager,memo,site_name:siteName});
+  const photoMap=[];
+  for(const block of catBlocks){
+    const cid=block.id.replace('cb-','');
+    const cat=document.getElementById(`cbc-${cid}`)?.value;
+    if(!cat){ toast('대분류를 선택하세요','err'); return; }
+    const subRows=block.querySelectorAll('[id^="sr-"]');
+    if(!subRows.length){ toast(`${cat}: 소분류를 추가하세요`,'err'); return; }
+    for(const sr of subRows){
+      const sid=sr.id.replace('sr-','');
+      const sub=document.getElementById(`src-${sid}`)?.value;
+      const md=parseFloat(document.getElementById(`srm-${sid}`)?.value)||0;
+      if(!sub){ toast(`${cat}: 소분류를 선택하세요`,'err'); return; }
+      if(!md){ toast(`${cat} > ${sub}: 인원/시간을 입력하세요`,'err'); return; }
+      const pIdx=payloads.length;
+      payloads.push({work_date:date,category:cat,sub_category:sub,
+        detail:document.getElementById(`srd-${sid}`)?.value||'',
+        manday:md, workers:parseInt(document.getElementById(`srw-${sid}`)?.value)||null,
+        start_time:startTime,end_time:endTime,weather,manager,memo,site_name:siteName});
+      if(sr===subRows[0]) photoMap.push({pIdx,cid});
+    }
   }
   if(!payloads.length){ toast('작업 항목을 추가하세요','err'); return; }
   const editId=document.getElementById('log-edit-group').value;
   if(editId){
     const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',editId);
     if(error){ toast('수정 실패: '+error.message,'err'); return; }
-    await uploadRowPhotos(editId,1);
+    for(const pm of photoMap){ if(pm.pIdx===0) await uploadCatPhotos(editId,pm.cid); }
   } else {
+    const insertedIds=[];
     for(let i=0;i<payloads.length;i++){
       const{data,error}=await sbClient.from('daily_logs').insert(payloads[i]).select().single();
       if(error){ toast('저장 실패: '+error.message,'err'); return; }
-      await uploadRowPhotos(data.id, i+1);
+      insertedIds.push(data.id);
     }
+    for(const pm of photoMap){ await uploadCatPhotos(insertedIds[pm.pIdx],pm.cid); }
   }
   closeLogModal();
   toast(`${payloads.length}개 작업 저장 완료 ✓`,'ok');
