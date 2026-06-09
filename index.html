@@ -219,7 +219,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 <div class="tab-nav">
   <button class="tab-btn active" onclick="switchTab('dashboard')" id="tab-dashboard"><span class="ti">📊</span>대시보드</button>
   <button class="tab-btn" onclick="switchTab('logs')" id="tab-logs"><span class="ti">📋</span>작업일지</button>
-  <button class="tab-btn" onclick="switchTab('summary')" id="tab-summary"><span class="ti">📈</span>맨데이집계</button>
+  <button class="tab-btn" onclick="switchTab('summary')" id="tab-summary"><span class="ti">📈</span>M/D집계</button>
   <button class="tab-btn" onclick="switchTab('workdb')" id="tab-workdb"><span class="ti">🗂️</span>공종DB</button>
   <button class="tab-btn" onclick="switchTab('settings')" id="tab-settings"><span class="ti">⚙️</span>설정</button>
 </div>
@@ -240,7 +240,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   <div id="logs-content"><div class="loading"><div class="spinner"></div>로딩 중...</div></div>
 </div>
 
-<!-- 맨데이 집계 -->
+<!-- M/D 집계 -->
 <div class="view" id="view-summary">
   <div class="search-box">
     <select class="fs" id="sum-search" onchange="loadSummary()" style="flex:1">
@@ -350,24 +350,28 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 
 <!-- 계획 추가 모달 -->
 <div class="modal-overlay" id="plan-modal">
-  <div class="modal" style="max-height:75vh">
+  <div class="modal" style="max-height:90vh">
     <div class="modal-title">
       <span id="plan-modal-title">📌 작업 계획 추가</span>
       <button class="modal-close" onclick="document.getElementById('plan-modal').classList.remove('open')">✕</button>
     </div>
     <input type="hidden" id="plan-edit-id">
     <div class="fg"><label class="fl">현장</label><select class="fs" id="plan-site"></select></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">공종 (대분류) *</label>
-        <select class="fs" id="plan-cat" onchange="updatePlanSub()"><option value="">선택</option></select>
-      </div>
-      <div class="fg"><label class="fl">소분류</label>
-        <select class="fs" id="plan-sub"><option value="">선택</option></select>
-      </div>
+    <!-- 공종 행들 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <label class="fl" style="margin:0">📋 공종별 계획 *</label>
+      <button class="btn bs bsm" onclick="addPlanRow()">＋ 공종 추가</button>
     </div>
-    <div class="fg"><label class="fl">예상 맨데이 *</label><input type="number" class="fi" id="plan-manday" step="0.01" placeholder="예: 10.00"></div>
-    <div class="fg"><label class="fl">비고</label><input type="text" class="fi" id="plan-note" placeholder="작업 개요 등"></div>
-    <button class="btn bp bfull" onclick="savePlan()">저장</button>
+    <div id="plan-rows"></div>
+    <!-- 합계 -->
+    <div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:var(--text-dim)">예상 총 M/D</span>
+      <span style="font-size:18px;font-weight:700;color:var(--sun)" id="plan-total-md">0.00</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn bs" style="flex:1" onclick="document.getElementById('plan-modal').classList.remove('open')">취소</button>
+      <button class="btn bp" style="flex:2" onclick="savePlanAll()">💾 저장</button>
+    </div>
   </div>
 </div>
 
@@ -505,7 +509,7 @@ async function initDateFilters(){
     const lt=document.getElementById('log-filter-to');
     if(lf&&!lf.value) lf.value=minDate;
     if(lt&&!lt.value) lt.value=maxDate;
-    // 맨데이 집계 필터
+    // M/D 집계 필터
     const sf=document.getElementById('sum-from');
     const st=document.getElementById('sum-to');
     if(sf&&!sf.value) sf.value=minDate;
@@ -542,6 +546,7 @@ async function loadDashboard(){
 
   const allLogs=logs||[];
   const allPlans=plans||[];
+  cachePlans(allPlans); // 수정 모달용 캐시
 
   // 현장 필터링
   const siteLogs=currentSiteId? allLogs.filter(l=>l.site_name===sites.find(s=>s.id===currentSiteId)?.name) : allLogs;
@@ -576,13 +581,30 @@ async function loadDashboard(){
     </div>`
     :'<div class="config-warn" style="margin-bottom:14px">🏗️ 설정 탭에서 현장을 선택해주세요</div>';
 
+  // 예상 총 M/D (계획 합산)
+  const plannedTotal=sitePlans.reduce((s,p)=>s+parseFloat(p.planned_manday||0),0);
+  const remainMd=plannedTotal-totalMd;
+  const remainColor=remainMd<0?'var(--red)':'#29B6F6';
+
   // 통계
   const statsHtml=`
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-val">${totalMd.toFixed(2)}</div><div class="stat-lbl">총 맨데이</div></div>
-      <div class="stat-card"><div class="stat-val">${totalDays}</div><div class="stat-lbl">작업일수</div></div>
-      <div class="stat-card"><div class="stat-val">${totalWorkers}</div><div class="stat-lbl">누적 투입인원</div></div>
-      <div class="stat-card"><div class="stat-val">${recent7}</div><div class="stat-lbl">최근 7일 작업일</div></div>
+    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat-card" style="border-color:rgba(245,166,35,0.4)">
+        <div class="stat-val">${plannedTotal.toFixed(2)}</div>
+        <div class="stat-lbl">예상 총 M/D</div>
+      </div>
+      <div class="stat-card" style="border-color:rgba(41,182,246,0.4)">
+        <div class="stat-val" style="color:#29B6F6">${totalMd.toFixed(2)}</div>
+        <div class="stat-lbl">현재 M/D</div>
+      </div>
+      <div class="stat-card" style="border-color:${remainMd<0?'rgba(231,76,60,0.4)':'rgba(41,182,246,0.2)'}">
+        <div class="stat-val" style="color:${remainColor}">${Math.abs(remainMd).toFixed(2)}${remainMd<0?' ▲':' ▼'}</div>
+        <div class="stat-lbl">${remainMd<0?'초과 M/D':'남은 M/D'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${totalDays}</div>
+        <div class="stat-lbl">작업일수</div>
+      </div>
     </div>`;
 
   // 대분류별 실제 맨데이 자동 집계 (작업일지 DB 기준)
@@ -619,13 +641,14 @@ async function loadDashboard(){
                 <div style="font-size:13px;font-weight:700">${p.category}${badge}${completedDateHtml}</div>
                 ${p.note?`<div style="font-size:12px;color:var(--text-dim);margin-top:2px">${p.note}</div>`:''}
                 <div style="font-size:12px;color:var(--text-dim);margin-top:4px">
-                  예상 <strong style="color:var(--sun)">${planned.toFixed(2)}</strong> 인·일 → 실적 <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${actual.toFixed(2)}</strong> 인·일
+                  예상 <strong style="color:var(--sun)">${planned.toFixed(2)}</strong> M/D → 실적 <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${actual.toFixed(2)}</strong> M/D
                   ${planned>0?`<span style="color:${pct<=100?'#29B6F6':'var(--red)'}"> (${pct}%)</span>`:''}
                 </div>
                 ${!p.is_completed&&actual>0?`<div style="margin-top:6px;background:var(--sky-dark);border-radius:4px;height:5px;overflow:hidden"><div style="height:100%;width:${Math.min(pct,100)}%;background:${pct<=100?'#29B6F6':'var(--red)'};transition:width 0.4s"></div></div>`:''}
               </div>
               <div style="display:flex;gap:5px;margin-left:8px">
                 ${!p.is_completed?`<button class="btn bg bsm" onclick="openCompleteModal(${p.id},${planned},${actual})">완료</button>`:''}
+                <button class="btn bs bsm" onclick="openEditPlanModal(${p.id})">✏️</button>
                 <button class="btn bd bsm" onclick="deletePlan(${p.id})">삭제</button>
               </div>
             </div>
@@ -637,59 +660,137 @@ async function loadDashboard(){
 }
 
 // ── 계획 ──
-function openPlanModal(id=null){
-  document.getElementById('plan-modal-title').textContent=id?'📌 계획 수정':'📌 작업 계획 추가';
-  document.getElementById('plan-edit-id').value=id||'';
-  document.getElementById('plan-manday').value='';
-  document.getElementById('plan-note').value='';
-  // 공종 드롭다운
-  const cats=[...new Set(workTypes.map(w=>w.category))];
-  document.getElementById('plan-cat').innerHTML='<option value="">선택</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-  document.getElementById('plan-sub').innerHTML='<option value="">선택</option>';
+let planRowCount=0;
+
+function openPlanModal(){
+  document.getElementById('plan-modal-title').textContent='📌 작업 계획 추가';
+  document.getElementById('plan-edit-id').value='';
+  document.getElementById('plan-rows').innerHTML='';
+  planRowCount=0;
   // 현장
   const sel=document.getElementById('plan-site');
   sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
   if(currentSiteId){ const site=sites.find(s=>s.id===currentSiteId); if(site) sel.value=site.name; }
+  addPlanRow();
+  document.getElementById('plan-total-md').textContent='0.00';
   document.getElementById('plan-modal').classList.add('open');
 }
-function updatePlanSub(){
-  const cat=document.getElementById('plan-cat').value;
-  const subs=workTypes.filter(w=>w.category===cat);
-  document.getElementById('plan-sub').innerHTML='<option value="">선택</option>'+subs.map(w=>`<option value="${w.sub_category}">${w.sub_category}</option>`).join('');
+
+function openEditPlanModal(id){
+  // 단일 항목 수정
+  const plans_all=window._cachedPlans||[];
+  const p=plans_all.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('plan-modal-title').textContent='📌 계획 수정';
+  document.getElementById('plan-edit-id').value=id;
+  document.getElementById('plan-rows').innerHTML='';
+  planRowCount=0;
+  const sel=document.getElementById('plan-site');
+  sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  if(p.site_name) sel.value=p.site_name;
+  addPlanRow({category:p.category, md:p.planned_manday, note:p.note||''});
+  updatePlanTotal();
+  document.getElementById('plan-modal').classList.add('open');
 }
-async function savePlan(){
-  const cat=document.getElementById('plan-cat').value;
-  const md=parseFloat(document.getElementById('plan-manday').value);
-  if(!cat||!md){ toast('공종과 예상 맨데이를 입력하세요','err'); return; }
-  const payload={
-    site_name:document.getElementById('plan-site').value||null,
-    category:cat,
-    sub_category:document.getElementById('plan-sub').value||null,
-    planned_manday:md,
-    note:document.getElementById('plan-note').value,
-  };
+
+function addPlanRow(data={}){
+  planRowCount++;
+  const rid=planRowCount;
+  const cats=[...new Set(workTypes.map(w=>w.category))];
+  const catOpts=cats.map(cat=>`<option value="${cat}" ${data.category===cat?'selected':''}>${cat}</option>`).join('');
+  const div=document.createElement('div');
+  div.id=`pr-${rid}`;
+  div.style.cssText='background:var(--sky-dark);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px';
+  div.innerHTML=`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <select class="fs" id="prc-${rid}" style="flex:1" onchange="updatePlanTotal()">
+        <option value="">공종(대분류) 선택 *</option>${catOpts}
+      </select>
+      <button class="btn bd bsm" onclick="removePlanRow(${rid})" style="padding:5px 8px">✕</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div class="fg" style="flex:1;margin-bottom:0">
+        <label class="fl">예상 M/D *</label>
+        <input type="number" class="fi" id="prm-${rid}" step="0.01" min="0.01" placeholder="0.00"
+          value="${data.md||''}" oninput="updatePlanTotal()">
+      </div>
+      <div class="fg" style="flex:2;margin-bottom:0">
+        <label class="fl">비고</label>
+        <input type="text" class="fi" id="prn-${rid}" placeholder="메모" value="${data.note||''}">
+      </div>
+    </div>`;
+  document.getElementById('plan-rows').appendChild(div);
+}
+
+function removePlanRow(rid){
+  document.getElementById(`pr-${rid}`)?.remove();
+  updatePlanTotal();
+}
+
+function updatePlanTotal(){
+  let total=0;
+  document.querySelectorAll('#plan-rows [id^="prm-"]').forEach(el=>{
+    total+=parseFloat(el.value)||0;
+  });
+  const el=document.getElementById('plan-total-md');
+  if(el) el.textContent=total.toFixed(2);
+}
+
+async function savePlanAll(){
+  const siteName=document.getElementById('plan-site').value||null;
   const editId=document.getElementById('plan-edit-id').value;
-  const{error}=editId
-    ? await sbClient.from('work_plans').update(payload).eq('id',editId)
-    : await sbClient.from('work_plans').insert(payload);
-  if(error){ toast('저장 실패','err'); return; }
+  const rows=document.querySelectorAll('#plan-rows>[id^="pr-"]');
+  if(!rows.length){ toast('공종을 추가하세요','err'); return; }
+
+  if(editId){
+    // 수정: 첫 번째 행만
+    const rid=rows[0].id.replace('pr-','');
+    const cat=document.getElementById(`prc-${rid}`)?.value;
+    const md=parseFloat(document.getElementById(`prm-${rid}`)?.value)||0;
+    if(!cat||!md){ toast('공종과 M/D를 입력하세요','err'); return; }
+    const{error}=await sbClient.from('work_plans').update({
+      site_name:siteName, category:cat, planned_manday:md,
+      note:document.getElementById(`prn-${rid}`)?.value||''
+    }).eq('id',editId);
+    if(error){ toast('수정 실패','err'); return; }
+    toast('계획 수정됨 ✓','ok');
+  } else {
+    // 추가: 여러 행
+    const payloads=[];
+    for(const row of rows){
+      const rid=row.id.replace('pr-','');
+      const cat=document.getElementById(`prc-${rid}`)?.value;
+      const md=parseFloat(document.getElementById(`prm-${rid}`)?.value)||0;
+      if(!cat||!md){ toast('모든 공종의 M/D를 입력하세요','err'); return; }
+      payloads.push({
+        site_name:siteName, category:cat, planned_manday:md,
+        note:document.getElementById(`prn-${rid}`)?.value||''
+      });
+    }
+    const{error}=await sbClient.from('work_plans').insert(payloads);
+    if(error){ toast('저장 실패','err'); return; }
+    toast(`${payloads.length}개 계획 저장됨 ✓`,'ok');
+  }
   document.getElementById('plan-modal').classList.remove('open');
-  toast('계획 저장됨 ✓','ok');
   loadDashboard();
 }
+
 async function deletePlan(id){
   if(!confirm('계획을 삭제할까요?')) return;
   await sbClient.from('work_plans').delete().eq('id',id);
   toast('삭제됨','ok'); loadDashboard();
 }
 
+// 계획 데이터 캐시 (수정 모달용)
+function cachePlans(plans){ window._cachedPlans=plans; }
+
 // ── 완료 처리 ──
 function openCompleteModal(planId, planned, actual){
   document.getElementById('complete-group-id').value=planId;
   document.getElementById('complete-plan-info').innerHTML=`
     <div style="background:var(--surface2);border-radius:8px;padding:10px;font-size:13px">
-      예상 맨데이: <strong style="color:var(--sun)">${parseFloat(planned).toFixed(2)} 인·일</strong>
-      &nbsp;→&nbsp; 실적: <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${parseFloat(actual).toFixed(2)} 인·일</strong>
+      예상 M/D: <strong style="color:var(--sun)">${parseFloat(planned).toFixed(2)} M/D</strong>
+      &nbsp;→&nbsp; 실적: <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${parseFloat(actual).toFixed(2)} M/D</strong>
       <span style="color:${actual<=planned?'#29B6F6':'var(--red)'}"> (${planned>0?Math.round(actual/planned*100):0}%)</span>
     </div>`;
   document.getElementById('complete-modal').classList.add('open');
@@ -762,7 +863,7 @@ async function loadLogs(){
             <div class="log-sub-stats">
               <span class="stat-pill workers">👷 ${workers}명</span>
               ${hours>0?`<span class="stat-pill hours">⏱ ${hours}h</span>`:''}
-              <span class="stat-pill manday">${manday.toFixed(2)} 인·일</span>
+              <span class="stat-pill manday">${manday.toFixed(2)} M/D</span>
             </div>
           </div>
           <div class="log-sub-actions">
@@ -786,7 +887,7 @@ async function loadLogs(){
       return `<div class="log-cat-block">
         <div class="log-cat-block-header">
           <span class="log-cat-block-name">📁 ${cat}</span>
-          <span class="log-cat-block-total">${catMd.toFixed(2)} 인·일${allCatPhotos.length?' · 📷'+allCatPhotos.length:''}</span>
+          <span class="log-cat-block-total">${catMd.toFixed(2)} M/D${allCatPhotos.length?' · 📷'+allCatPhotos.length:''}</span>
         </div>
         ${subsHtml}${photosHtml}
       </div>`;
@@ -796,7 +897,7 @@ async function loadLogs(){
       <div class="log-group-header" onclick="toggleLogGroup(this)">
         <div>
           <div class="log-group-date">${date} ${weather}</div>
-          <div class="log-group-meta">${cats} · 총 ${totalMd.toFixed(2)} 인·일 · ${maxWorkers}명${manager?' · '+manager:''}</div>
+          <div class="log-group-meta">${cats} · 총 ${totalMd.toFixed(2)} M/D · ${maxWorkers}명${manager?' · '+manager:''}</div>
         </div>
         <span style="color:var(--text-dim);font-size:12px">${isLatest?'▼':'▶'}</span>
       </div>
@@ -896,7 +997,7 @@ function addSubRow(cid, data={}){
       <div class="fg"><label class="fl">작업시간(h)</label>
         <input type="number" class="fi" id="srh-${sid}" min="0.5" max="24" step="0.5" value="${(data&&data.hours)||8}" oninput="calcSrMd(${sid},${cid})">
       </div>
-      <div class="fg"><label class="fl">맨데이</label>
+      <div class="fg"><label class="fl">M/D</label>
         <input type="number" class="fi" id="srm-${sid}" step="0.01" readonly style="color:var(--sun)" value="${(data&&data.manday)?parseFloat(data.manday).toFixed(2):''}" >
       </div>
     </div>`;
@@ -920,7 +1021,7 @@ function updateCbTotal(cid){
   let total=0;
   document.querySelectorAll(`#cb-subs-${cid} [id^="srm-"]`).forEach(el=>{ total+=parseFloat(el.value)||0; });
   const el=document.getElementById(`cb-total-${cid}`);
-  if(el) el.textContent=total>0?`합계 ${total.toFixed(2)} 인·일`:'';
+  if(el) el.textContent=total>0?`합계 ${total.toFixed(2)} M/D`:'';
 }
 
 function toggleCatDone(cid){
@@ -1110,7 +1211,7 @@ async function deleteLog(id){
 }
 
 // ═══════════════════════════════════════════
-// 맨데이 집계
+// M/D 집계
 // ═══════════════════════════════════════════
 async function loadSummary(){
   if(!sbClient) return;
@@ -1146,7 +1247,7 @@ async function loadSummary(){
   let rows=''; let no=1;
   Object.entries(catMap).forEach(([cat,cd])=>{
     rows+=`<tr style="background:var(--surface2)">
-      <td colspan="5" style="text-align:left;padding-left:10px;font-weight:700;color:var(--sun)">${cat} <small style="color:var(--text-dim);font-weight:400">${cd.totalMd.toFixed(2)} 인·일 · ${cd.dates.size}일</small></td>
+      <td colspan="5" style="text-align:left;padding-left:10px;font-weight:700;color:var(--sun)">${cat} <small style="color:var(--text-dim);font-weight:400">${cd.totalMd.toFixed(2)} M/D · ${cd.dates.size}일</small></td>
     </tr>`;
     Object.entries(cd.subs).forEach(([sub,sd])=>{
       const dateChips=[...sd.dates].sort().map(d=>`<span class="date-chip">${d}</span>`).join('');
@@ -1162,12 +1263,12 @@ async function loadSummary(){
 
   el.innerHTML=`
     <div class="stat-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
-      <div class="stat-card"><div class="stat-val">${totalMd.toFixed(2)}</div><div class="stat-lbl">총 맨데이</div></div>
+      <div class="stat-card"><div class="stat-val">${totalMd.toFixed(2)}</div><div class="stat-lbl">총 M/D</div></div>
       <div class="stat-card"><div class="stat-val">${totalDays}</div><div class="stat-lbl">총 작업일수</div></div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <table class="sum-table">
-        <thead><tr><th>No</th><th>소분류</th><th>작업일수</th><th>맨데이</th><th>작업날짜</th></tr></thead>
+        <thead><tr><th>No</th><th>소분류</th><th>작업일수</th><th>M/D</th><th>작업날짜</th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr class="total"><td colspan="2">합 계</td><td>${totalDays}</td><td>${totalMd.toFixed(2)}</td><td></td></tr></tfoot>
       </table>
@@ -1187,8 +1288,8 @@ async function loadWorkTypes(){
 function populateCategorySelects(){
   const cats=[]; workTypes.forEach(w=>{if(!cats.includes(w.category)) cats.push(w.category);});
   const opts='<option value="">선택</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-  ['log-category','plan-cat'].forEach(id=>{const el=document.getElementById(id);if(el) el.innerHTML=opts;});
-  // 맨데이 집계 드롭다운
+  ['log-category'].forEach(id=>{const el=document.getElementById(id);if(el) el.innerHTML=opts;});
+  // M/D 집계 드롭다운
   const sumSel=document.getElementById('sum-search');
   if(sumSel){
     const curVal=sumSel.value;
@@ -1389,7 +1490,7 @@ function openExportModal(){ document.getElementById('export-modal').classList.ad
 async function exportCSV(){
   const{data:logs}=await sbClient.from('daily_logs').select('*').order('work_date');
   if(!logs||!logs.length){ toast('데이터가 없습니다','err'); return; }
-  const h=['날짜','현장','대분류','소분류','세부내용','투입인원','맨데이','시작','종료','날씨','확인자','메모'];
+  const h=['날짜','현장','대분류','소분류','세부내용','투입인원','M/D','시작','종료','날씨','확인자','메모'];
   const rows=logs.map(l=>[l.work_date,l.site_name||'',l.category,l.sub_category,l.detail||'',l.workers||'',l.manday,l.start_time||'',l.end_time||'',l.weather||'',l.manager||'',l.memo||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
   const csv='\uFEFF'+[h.join(','),...rows].join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
