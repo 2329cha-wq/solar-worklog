@@ -633,56 +633,7 @@ async function loadDashboard(){
   });
 
   // 작업 계획 vs 실적
-  const planHtml=`
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div class="card-title" style="margin:0">📌 작업 계획 현황</div>
-        <button class="btn bp bsm" onclick="openPlanModal()">＋ 계획 추가</button>
-      </div>
-      ${sitePlans.length===0?'<div class="empty"><div class="empty-icon">📭</div>작업 계획을 추가해보세요</div>':
-        `<div id="plan-list-sortable">${sitePlans.map((p,pidx)=>{
-          const actual=actualByCategory[p.category]||0;
-          const planned=parseFloat(p.planned_manday||0);
-          const pct=planned>0?Math.round(actual/planned*100):0;
-          // 상태: 완료 > 진행중(실제 작업 있음) > 준비중(작업 없음)
-          let cls,badge;
-          if(p.is_completed){
-            cls=actual<=planned?'completed-early':'completed-late';
-            badge=actual<=planned
-              ?'<span class="status-badge sb-early" style="background:rgba(41,182,246,0.2);color:#29B6F6">✓ 일정 내 완료</span>'
-              :'<span class="status-badge sb-late">✓ 지연 완료</span>';
-          } else if(actual>0){
-            cls='ongoing';
-            badge='<span class="status-badge sb-ongoing">진행중</span>';
-          } else {
-            cls='';
-            badge='<span class="status-badge" style="background:rgba(122,155,174,0.15);color:var(--text-dim)">준비중</span>';
-          }
-          const completedDateHtml=p.is_completed&&p.completed_at
-            ?`<span style="font-size:11px;color:var(--text-dim);margin-left:6px">완료일: ${p.completed_at}</span>`:''
-          return `<div class="plan-item ${cls}" data-plan-id="${p.id}" style="cursor:default">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start">
-              <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
-                <span class="drag-handle plan-drag" style="cursor:grab;font-size:15px;color:var(--text-dim);padding-top:2px;user-select:none">☰</span>
-                <div style="flex:1">
-                  <div style="font-size:13px;font-weight:700">${p.category}${badge}${completedDateHtml}</div>
-                  ${p.note?`<div style="font-size:12px;color:var(--text-dim);margin-top:2px">${p.note}</div>`:''}
-                  <div style="font-size:12px;color:var(--text-dim);margin-top:4px">
-                    예상 <strong style="color:var(--sun)">${planned.toFixed(2)}</strong> M/D → 실적 <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${actual.toFixed(2)}</strong> M/D
-                    ${planned>0?`<span style="color:${pct<=100?'#29B6F6':'var(--red)'}"> (${pct}%)</span>`:''}
-                  </div>
-                  ${!p.is_completed&&actual>0?`<div style="margin-top:6px;background:var(--sky-dark);border-radius:4px;height:5px;overflow:hidden"><div style="height:100%;width:${Math.min(pct,100)}%;background:${pct<=100?'#29B6F6':'var(--red)'};transition:width 0.4s"></div></div>`:''}
-                </div>
-              </div>
-              <div style="display:flex;gap:5px;margin-left:8px;flex-shrink:0">
-                ${!p.is_completed?`<button class="btn bg bsm" onclick="openCompleteModal(${p.id},${planned},${actual})">완료</button>`:''}
-                <button class="btn bs bsm" onclick="openEditPlanModal(${p.id})">✏️</button>
-                <button class="btn bd bsm" onclick="deletePlan(${p.id})">삭제</button>
-              </div>
-            </div>
-          </div>`;
-        }).join('')}</div>`}
-    </div>`;
+  const planHtml=buildPlanHtml(sitePlans, actualByCategory);
 
   el.innerHTML=siteCard+statsHtml+planHtml;
   // 계획 순서 드래그 초기화
@@ -821,6 +772,66 @@ async function deletePlan(id){
   toast('삭제됨','ok'); loadDashboard();
 }
 
+function buildPlanHtml(sitePlans, actualByCategory){
+  let inner = '';
+  if(sitePlans.length===0){
+    inner = '<div class="empty"><div class="empty-icon">📭</div>작업 계획을 추가해보세요</div>';
+  } else {
+    let rows = '';
+    sitePlans.forEach(function(p){
+      const actual = actualByCategory[p.category]||0;
+      const planned = parseFloat(p.planned_manday||0);
+      const pct = planned>0?Math.round(actual/planned*100):0;
+      let cls, badge;
+      if(p.is_completed){
+        cls = actual<=planned?'completed-early':'completed-late';
+        badge = actual<=planned
+          ? '<span class="status-badge sb-early" style="background:rgba(41,182,246,0.2);color:#29B6F6">✓ 일정 내 완료</span>'
+          : '<span class="status-badge sb-late">✓ 지연 완료</span>';
+      } else if(actual>0){
+        cls = 'ongoing';
+        badge = '<span class="status-badge sb-ongoing">진행중</span>';
+      } else {
+        cls = '';
+        badge = '<span class="status-badge" style="background:rgba(122,155,174,0.15);color:var(--text-dim)">준비중</span>';
+      }
+      const completedDateHtml = p.is_completed&&p.completed_at
+        ? '<span style="font-size:11px;color:var(--text-dim);margin-left:6px">완료일: '+p.completed_at+'</span>' : '';
+      const progressBar = (!p.is_completed&&actual>0)
+        ? '<div style="margin-top:6px;background:var(--sky-dark);border-radius:4px;height:5px;overflow:hidden"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+(pct<=100?'#29B6F6':'var(--red)')+';transition:width 0.4s"></div></div>' : '';
+      const noteHtml = p.note ? '<div style="font-size:12px;color:var(--text-dim);margin-top:2px">'+p.note+'</div>' : '';
+      const completeBtn = !p.is_completed
+        ? '<button class="btn bg bsm" onclick="openCompleteModal('+p.id+','+planned+','+actual+')">완료</button>' : '';
+      rows += '<div class="plan-item '+cls+'" data-plan-id="'+p.id+'" style="cursor:default">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1">'
+        + '<span class="drag-handle plan-drag" style="cursor:grab;font-size:15px;color:var(--text-dim);padding-top:2px;user-select:none;touch-action:none">☰</span>'
+        + '<div style="flex:1">'
+        + '<div style="font-size:13px;font-weight:700">'+p.category+badge+completedDateHtml+'</div>'
+        + noteHtml
+        + '<div style="font-size:12px;color:var(--text-dim);margin-top:4px">'
+        + '예상 <strong style="color:var(--sun)">'+planned.toFixed(2)+'</strong> M/D → 실적 <strong style="color:'+(actual<=planned?'#29B6F6':'var(--red)')+'">'+actual.toFixed(2)+'</strong> M/D'
+        + (planned>0 ? ' <span style="color:'+(pct<=100?'#29B6F6':'var(--red)')+'"> ('+pct+'%)</span>' : '')
+        + '</div>'
+        + progressBar
+        + '</div></div>'
+        + '<div style="display:flex;gap:5px;margin-left:8px;flex-shrink:0">'
+        + completeBtn
+        + '<button class="btn bs bsm" onclick="openEditPlanModal('+p.id+')">✏️</button>'
+        + '<button class="btn bd bsm" onclick="deletePlan('+p.id+')">삭제</button>'
+        + '</div></div></div>';
+    });
+    inner = '<div id="plan-list-sortable">'+rows+'</div>';
+  }
+  return '<div class="card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    + '<div class="card-title" style="margin:0">📌 작업 계획 현황</div>'
+    + '<button class="btn bp bsm" onclick="openPlanModal()">＋ 계획 추가</button>'
+    + '</div>'
+    + inner
+    + '</div>';
+}
+
 // 계획 데이터 캐시 (수정 모달용)
 function cachePlans(plans){ window._cachedPlans=plans; }
 
@@ -944,6 +955,7 @@ async function loadLogs(){
           <div style="display:flex;align-items:center;gap:8px">
             <div class="log-group-date">${date} ${weather}</div>
             <button class="btn bs bsm" onclick="event.stopPropagation();openDateGroupEdit('${date}')" style="padding:3px 8px;font-size:10px">✏️</button>
+            <button class="btn bd bsm" onclick="event.stopPropagation();deleteLogGroup('${date}')" style="padding:3px 8px;font-size:10px">🗑</button>
           </div>
           <div class="log-group-meta">${cats} · 총 ${totalMd.toFixed(2)} M/D · ${maxWorkers}명${manager?' · '+manager:''}${timeStr}</div>
           ${memo?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">📝 ${memo}</div>`:''}
@@ -987,6 +999,14 @@ async function saveDateGroupEdit(){
   document.getElementById('date-group-edit-modal').classList.remove('open');
   toast('수정됨 ✓','ok');
   loadLogs();
+}
+
+async function deleteLogGroup(date){
+  if(!confirm(date+' 날짜의 작업일지를 전부 삭제할까요?')) return;
+  const{error}=await sbClient.from('daily_logs').delete().eq('work_date',date);
+  if(error){ toast('삭제 실패: '+error.message,'err'); return; }
+  toast(date+' 삭제됨','ok');
+  initDateFilters().then(()=>{ loadLogs(); loadDashboard(); loadSummary(); });
 }
 
 // ═══════════════════════════════════════════
@@ -1263,7 +1283,31 @@ async function openEditLog(id){
   const _w=parseFloat(l.workers)||0, _md=parseFloat(l.manday)||0;
   const _hours=_w>0?Math.round(_md*8/_w*100)/100:8;
   addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_hours,manday:l.manday}]});
+  // 기존 사진 표시 (삭제 가능)
+  if(l.photos&&l.photos.length){
+    setTimeout(()=>{
+      const pgEl=document.getElementById('cbpg-1');
+      if(!pgEl) return;
+      l.photos.forEach(p=>{
+        const div=document.createElement('div'); div.className='photo-item'; div.dataset.photoId=p.id;
+        div.innerHTML='<img src="'+p.url+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px">'
+          +'<button class="photo-rm" onclick="deleteExistingPhoto('+p.id+',this.parentNode)">✕</button>';
+        pgEl.appendChild(div);
+      });
+    },100);
+  }
+  ['log-start','log-end'].forEach(elid=>{
+    const el=document.getElementById(elid);
+    if(el) el.oninput=()=>syncAllSubHours();
+  });
   document.getElementById('log-modal').classList.add('open');
+}
+
+async function deleteExistingPhoto(photoId, el){
+  const{error}=await sbClient.from('photos').delete().eq('id',photoId);
+  if(error){ toast('사진 삭제 실패','err'); return; }
+  el?.remove();
+  toast('사진 삭제됨','ok');
 }
 
 function closeLogModal(){ document.getElementById('log-modal').classList.remove('open'); }
