@@ -281,13 +281,18 @@ async function loadAll(){
 
 window.addEventListener('DOMContentLoaded',()=>{
   const ok=loadConfig();
-  if(ok)loadAll(); else showConfigWarning();
+  if(ok){loadAll();}else{showConfigWarning();switchTab('settings');}
   document.getElementById('log-workers').addEventListener('input',calcManday);
   document.getElementById('log-hours').addEventListener('input',calcManday);
 });
 
 function showConfigWarning(){
-  document.getElementById('dashboard-content').innerHTML=`<div class="config-warning">⚠️ Supabase 연결이 필요합니다.<br><strong>설정</strong> 탭에서 Project URL과 Anon Key를 입력해주세요.</div>`;
+  document.getElementById('dashboard-content').innerHTML=`
+    <div class="config-warning">
+      ⚠️ <strong>Supabase 연결이 필요합니다.</strong><br><br>
+      아래 설정 탭에서 Project URL과 Anon Key를 입력하고<br>
+      <strong>"저장 및 연결"</strong> 버튼을 눌러주세요.
+    </div>`;
   document.getElementById('log-list-content').innerHTML='';
   document.getElementById('summary-content').innerHTML='';
   document.getElementById('work-type-list').innerHTML='';
