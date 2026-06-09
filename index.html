@@ -9,6 +9,7 @@
 <title>태양광 작업일지</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
 :root {
   --sun: #F5A623;--sun-light: #FFD580;--sky: #1A6B8A;--sky-dark: #0F2027;
@@ -97,6 +98,14 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .empty-icon{font-size:40px;margin-bottom:12px}
 .empty-text{font-size:14px}
 .config-warning{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.4);border-radius:var(--radius);padding:16px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--sun)}
+.site-card-selected{border:2px solid var(--sun)!important;background:rgba(245,166,35,0.08)!important;}
+.site-badge{display:inline-block;background:var(--sun);color:var(--sky-dark);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px}
+.drag-handle{cursor:grab;color:var(--text-dim);font-size:18px;padding:0 4px;user-select:none;touch-action:none}
+.drag-handle:active{cursor:grabbing}
+.work-row-dragging{opacity:0.4;border:2px dashed var(--sun)!important}
+.work-row-dragover{border-top:2px solid var(--sun)!important}
+.app-site-tag{background:rgba(245,166,35,0.2);color:var(--sun);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px;display:inline-block}
+.header-site{font-size:13px;font-weight:700;color:var(--sun);margin-top:2px}
 .work-row{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;position:relative}
 .work-row-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .work-row-num{font-size:11px;font-weight:700;color:var(--sun);background:rgba(245,166,35,0.15);padding:2px 8px;border-radius:10px}
@@ -113,7 +122,8 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
     <div class="sun-icon"></div>
     <div>
       <div class="app-title">태양광 작업일지</div>
-      <div class="app-subtitle" id="site-name-header">현장을 선택하세요</div>
+      <div class="app-subtitle" id="site-name-header-sub">현장을 선택하세요</div>
+      <div class="header-site" id="site-name-header" style="display:none"></div>
     </div>
   </div>
   <button class="header-btn" onclick="openExportModal()">📊 내보내기</button>
@@ -287,6 +297,31 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   </div>
 </div>
 
+<!-- 현장 수정 모달 -->
+<div class="modal-overlay" id="edit-site-modal">
+  <div class="modal" style="max-height:80vh">
+    <div class="modal-title">
+      🏗️ 현장 수정
+      <button class="modal-close" onclick="document.getElementById('edit-site-modal').classList.remove('open')">✕</button>
+    </div>
+    <input type="hidden" id="edit-site-id">
+    <div class="form-group"><label class="form-label">현장명 *</label><input type="text" class="form-input" id="edit-site-name"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">발주처</label><input type="text" class="form-input" id="edit-site-client"></div>
+      <div class="form-group"><label class="form-label">시공사</label><input type="text" class="form-input" id="edit-site-contractor"></div>
+    </div>
+    <div class="form-group"><label class="form-label">현장 위치</label><input type="text" class="form-input" id="edit-site-location"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">착공일</label><input type="date" class="form-input" id="edit-site-start"></div>
+      <div class="form-group"><label class="form-label">준공예정일</label><input type="date" class="form-input" id="edit-site-end"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="document.getElementById('edit-site-modal').classList.remove('open')">취소</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveEditSite()">💾 저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -360,7 +395,25 @@ async function loadDashboard(){
   const catMap={};
   logs.forEach(l=>{if(!catMap[l.category])catMap[l.category]=0;catMap[l.category]+=parseFloat(l.manday||0);});
   const cats=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  document.getElementById('dashboard-content').innerHTML=`
+  // 선택된 현장 정보
+  const selSite=sites.find(s=>s.id==currentSiteId);
+  const siteCard=selSite?`
+    <div class="card" style="margin-bottom:16px;border-color:rgba(245,166,35,0.5)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--sun);margin-bottom:6px">${selSite.name}</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.8">
+            ${selSite.client?'발주처: '+selSite.client+'<br>':''}
+            ${selSite.contractor?'시공사: '+selSite.contractor+'<br>':''}
+            ${selSite.start_date?'착공: '+selSite.start_date:''}
+            ${selSite.end_date?' ~ 준공: '+selSite.end_date:''}
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="switchTab('settings')">관리</button>
+      </div>
+    </div>`:'<div class="config-warning" style="margin-bottom:16px">&#x1F3D7;&#xFE0F; 설정 탭에서 현장을 선택해주세요</div>';
+
+  document.getElementById('dashboard-content').innerHTML=siteCard+`
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-value">${totalMd.toFixed(1)}</div><div class="stat-label">총 맨데이 (인·일)</div></div>
       <div class="stat-card"><div class="stat-value">${totalDays}</div><div class="stat-label">총 작업일수</div></div>
@@ -480,15 +533,12 @@ function renderWorkTypeList(){
     if(!catMap[wt.category]){catMap[wt.category]=[];catOrder.push(wt.category);}
     catMap[wt.category].push(wt);
   });
-  el.innerHTML=catOrder.map((cat,catIdx)=>{
-    const safeCat=cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<div class="card" style="margin-bottom:12px">
+  el.innerHTML=catOrder.map((cat)=>{
+    const safeCat=cat.replace(/\/g,'\\').replace(/'/g,"\'");
+    return `<div class="card" data-cat="${cat}" style="margin-bottom:12px">
       <div class="cat-header">
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;line-height:1" onclick="moveCat('${safeCat}','up')" ${catIdx===0?'disabled':''}>&#9650;</button>
-            <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;line-height:1" onclick="moveCat('${safeCat}','down')" ${catIdx===catOrder.length-1?'disabled':''}>&#9660;</button>
-          </div>
+          <span class="drag-handle cat-drag">&#x2630;</span>
           <div style="font-size:14px;font-weight:700;color:var(--sun)">${cat}</div>
         </div>
         <div class="cat-actions">
@@ -497,24 +547,57 @@ function renderWorkTypeList(){
           <button class="btn btn-danger btn-sm" onclick="deleteCategory('${safeCat}')">삭제</button>
         </div>
       </div>
-      ${catMap[cat].map((wt,subIdx)=>{
-        const safeSub=wt.sub_category.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-        return `<div class="work-type-item">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="display:flex;gap:2px">
-              <button class="btn btn-secondary btn-sm" style="padding:3px 6px;font-size:10px;line-height:1" onclick="moveSub(${wt.id},'up')" ${subIdx===0?'disabled':''}>&#9650;</button>
-              <button class="btn btn-secondary btn-sm" style="padding:3px 6px;font-size:10px;line-height:1" onclick="moveSub(${wt.id},'down')" ${subIdx===catMap[cat].length-1?'disabled':''}>&#9660;</button>
+      <div class="sub-list" data-cat="${cat}">
+        ${catMap[cat].map((wt)=>{
+          const safeSub=wt.sub_category.replace(/\/g,'\\').replace(/'/g,"\'");
+          return `<div class="work-type-item" data-id="${wt.id}" style="cursor:default">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="drag-handle sub-drag" style="font-size:14px">&#x2630;</span>
+              <div class="work-type-name">${wt.sub_category}</div>
             </div>
-            <div class="work-type-name">${wt.sub_category}</div>
-          </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-secondary btn-sm" onclick="openEditSub(${wt.id},'${safeSub}')">수정</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteWorkType(${wt.id})">삭제</button>
-          </div>
-        </div>`;
-      }).join('')}
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="openEditSub(${wt.id},'${safeSub}')">수정</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteWorkType(${wt.id})">삭제</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
   }).join('');
+
+  // 대분류 드래그 초기화
+  if(window.Sortable){
+    Sortable.create(el,{
+      handle:'.cat-drag',
+      animation:150,
+      onEnd:async(evt)=>{
+        const cards=[...el.querySelectorAll('[data-cat]')];
+        const updates=[];
+        cards.forEach((card,i)=>{
+          const cat=card.getAttribute('data-cat');
+          const items=workTypes.filter(w=>w.category===cat);
+          items.forEach(w=>updates.push(sbClient.from('work_types').update({sort_order:i*100+w.sort_order%100}).eq('id',w.id)));
+        });
+        await Promise.all(updates);
+        await loadWorkTypes();
+      }
+    });
+    // 소분류 드래그 초기화
+    el.querySelectorAll('.sub-list').forEach(subEl=>{
+      Sortable.create(subEl,{
+        handle:'.sub-drag',
+        animation:150,
+        onEnd:async(evt)=>{
+          const items=[...subEl.querySelectorAll('[data-id]')];
+          const catBase=workTypes.find(w=>w.category===subEl.getAttribute('data-cat'));
+          const baseOrder=catBase?Math.floor(catBase.sort_order/100)*100:0;
+          const updates=items.map((item,i)=>sbClient.from('work_types').update({sort_order:baseOrder+i+1}).eq('id',parseInt(item.getAttribute('data-id'))));
+          await Promise.all(updates);
+          await loadWorkTypes();
+        }
+      });
+    });
+  }
 }
 function populateCategorySelect(){
   const cats=[];
@@ -660,7 +743,18 @@ async function deleteWorkType(id){
 async function loadSites(){
   if(!sbClient)return;
   const{data}=await sbClient.from('sites').select('*').order('created_at');
-  sites=data||[];renderSiteList();populateSiteSelect();
+  sites=data||[];
+  // localStorage에서 선택된 현장 복원
+  const savedId=localStorage.getItem('selected_site_id');
+  const savedName=localStorage.getItem('selected_site_name');
+  if(savedId&&sites.some(s=>s.id==savedId)){
+    currentSiteId=savedId;
+    const sub=document.getElementById('site-name-header-sub');
+    const main=document.getElementById('site-name-header');
+    if(sub)sub.textContent='현재 현장';
+    if(main){main.textContent=savedName;main.style.display='block';}
+  }
+  renderSiteList();populateSiteSelect();
 }
 function renderSiteList(){
   const el=document.getElementById('site-list');
@@ -682,8 +776,16 @@ function populateSiteSelect(){
 }
 function selectSite(id,name){
   currentSiteId=id;
-  document.getElementById('site-name-header').textContent=name;
-  showToast(name+' 선택됨','success');
+  localStorage.setItem('selected_site_id',id);
+  localStorage.setItem('selected_site_name',name);
+  // 헤더 업데이트
+  const sub=document.getElementById('site-name-header-sub');
+  const main=document.getElementById('site-name-header');
+  if(sub){sub.textContent='현재 현장';}
+  if(main){main.textContent=name;main.style.display='block';}
+  // 사이트 리스트 강조 다시 렌더
+  renderSiteList();
+  showToast(name+' 선택됨 ✓','success');
 }
 async function addSite(){
   const name=document.getElementById('new-site-name').value.trim();
@@ -695,8 +797,51 @@ async function addSite(){
 }
 async function deleteSite(id){
   if(!confirm('현장을 삭제할까요?'))return;
+  if(id==currentSiteId){
+    currentSiteId=null;
+    localStorage.removeItem('selected_site_id');
+    localStorage.removeItem('selected_site_name');
+    const main=document.getElementById('site-name-header');
+    const sub=document.getElementById('site-name-header-sub');
+    if(main){main.style.display='none';main.textContent='';}
+    if(sub)sub.textContent='현장을 선택하세요';
+  }
   await sbClient.from('sites').delete().eq('id',id);
   await loadSites();showToast('삭제됨','success');
+}
+function openEditSite(id){
+  const s=sites.find(x=>x.id===id);
+  if(!s)return;
+  document.getElementById('edit-site-id').value=s.id;
+  document.getElementById('edit-site-name').value=s.name||'';
+  document.getElementById('edit-site-client').value=s.client||'';
+  document.getElementById('edit-site-contractor').value=s.contractor||'';
+  document.getElementById('edit-site-location').value=s.location||'';
+  document.getElementById('edit-site-start').value=s.start_date||'';
+  document.getElementById('edit-site-end').value=s.end_date||'';
+  document.getElementById('edit-site-modal').classList.add('open');
+}
+async function saveEditSite(){
+  const id=document.getElementById('edit-site-id').value;
+  const name=document.getElementById('edit-site-name').value.trim();
+  if(!name){showToast('현장명을 입력하세요','error');return;}
+  const{error}=await sbClient.from('sites').update({
+    name,
+    client:document.getElementById('edit-site-client').value.trim(),
+    contractor:document.getElementById('edit-site-contractor').value.trim(),
+    location:document.getElementById('edit-site-location').value.trim(),
+    start_date:document.getElementById('edit-site-start').value||null,
+    end_date:document.getElementById('edit-site-end').value||null,
+  }).eq('id',id);
+  if(error){showToast('수정 실패','error');return;}
+  // 선택된 현장이 수정된 경우 헤더도 업데이트
+  if(id==currentSiteId){
+    localStorage.setItem('selected_site_name',name);
+    const main=document.getElementById('site-name-header');
+    if(main)main.textContent=name;
+  }
+  document.getElementById('edit-site-modal').classList.remove('open');
+  await loadSites();showToast('현장 수정됨 ✓','success');
 }
 
 // 작업 행 추가
