@@ -444,6 +444,26 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   </div>
 </div>
 
+<!-- 날짜 그룹 수정 모달 -->
+<div class="modal-overlay" id="date-group-edit-modal">
+  <div class="modal" style="max-height:60vh">
+    <div class="modal-title">✏️ 날짜 정보 수정
+      <button class="modal-close" onclick="document.getElementById('date-group-edit-modal').classList.remove('open')">✕</button>
+    </div>
+    <input type="hidden" id="dge-date">
+    <div class="fr">
+      <div class="fg"><label class="fl">시작시간</label><input type="time" class="fi" id="dge-start"></div>
+      <div class="fg"><label class="fl">종료시간</label><input type="time" class="fi" id="dge-end"></div>
+    </div>
+    <div class="fg"><label class="fl">확인자</label><input type="text" class="fi" id="dge-manager"></div>
+    <div class="fg"><label class="fl">특이사항</label><textarea class="ft" id="dge-memo" style="min-height:70px"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn bs" style="flex:1" onclick="document.getElementById('date-group-edit-modal').classList.remove('open')">취소</button>
+      <button class="btn bp" style="flex:2" onclick="saveDateGroupEdit()">💾 저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -498,22 +518,20 @@ async function loadAll(){
 }
 
 async function initDateFilters(){
-  // DB에서 작업일지 min/max 날짜 가져와서 필터에 자동 세팅
   try{
     const{data}=await sbClient.from('daily_logs').select('work_date').order('work_date',{ascending:true});
     if(!data||!data.length) return;
     const minDate=data[0].work_date;
     const maxDate=data[data.length-1].work_date;
-    // 작업일지 필터
+    // 항상 최신 범위로 업데이트 (신규 작업 추가 시도 반영)
     const lf=document.getElementById('log-filter-from');
     const lt=document.getElementById('log-filter-to');
-    if(lf&&!lf.value) lf.value=minDate;
-    if(lt&&!lt.value) lt.value=maxDate;
-    // M/D 집계 필터
+    if(lf) lf.value=minDate;
+    if(lt) lt.value=maxDate;
     const sf=document.getElementById('sum-from');
     const st=document.getElementById('sum-to');
-    if(sf&&!sf.value) sf.value=minDate;
-    if(st&&!st.value) st.value=maxDate;
+    if(sf) sf.value=minDate;
+    if(st) st.value=maxDate;
   }catch(e){}
 }
 
@@ -540,7 +558,7 @@ async function loadDashboard(){
   const el=document.getElementById('dash-content');
   const[{data:logs,error:e1},{data:plans,error:e2}]=await Promise.all([
     sbClient.from('daily_logs').select('*'),
-    sbClient.from('work_plans').select('*')
+    sbClient.from('work_plans').select('*').order('sort_order',{ascending:true})
   ]);
   if(e1){ el.innerHTML=`<div class="config-warn">⚠️ DB 오류: ${e1.message}</div>`; return; }
 
@@ -622,41 +640,63 @@ async function loadDashboard(){
         <button class="btn bp bsm" onclick="openPlanModal()">＋ 계획 추가</button>
       </div>
       ${sitePlans.length===0?'<div class="empty"><div class="empty-icon">📭</div>작업 계획을 추가해보세요</div>':
-        sitePlans.map(p=>{
+        `<div id="plan-list-sortable">${sitePlans.map((p,pidx)=>{
           const actual=actualByCategory[p.category]||0;
           const planned=parseFloat(p.planned_manday||0);
           const pct=planned>0?Math.round(actual/planned*100):0;
-          let cls='ongoing', badge='<span class="status-badge sb-ongoing">진행중</span>';
+          // 상태: 완료 > 진행중(실제 작업 있음) > 준비중(작업 없음)
+          let cls,badge;
           if(p.is_completed){
             cls=actual<=planned?'completed-early':'completed-late';
             badge=actual<=planned
               ?'<span class="status-badge sb-early" style="background:rgba(41,182,246,0.2);color:#29B6F6">✓ 일정 내 완료</span>'
               :'<span class="status-badge sb-late">✓ 지연 완료</span>';
+          } else if(actual>0){
+            cls='ongoing';
+            badge='<span class="status-badge sb-ongoing">진행중</span>';
+          } else {
+            cls='';
+            badge='<span class="status-badge" style="background:rgba(122,155,174,0.15);color:var(--text-dim)">준비중</span>';
           }
           const completedDateHtml=p.is_completed&&p.completed_at
             ?`<span style="font-size:11px;color:var(--text-dim);margin-left:6px">완료일: ${p.completed_at}</span>`:''
-          return `<div class="plan-item ${cls}">
+          return `<div class="plan-item ${cls}" data-plan-id="${p.id}" style="cursor:default">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
-              <div style="flex:1">
-                <div style="font-size:13px;font-weight:700">${p.category}${badge}${completedDateHtml}</div>
-                ${p.note?`<div style="font-size:12px;color:var(--text-dim);margin-top:2px">${p.note}</div>`:''}
-                <div style="font-size:12px;color:var(--text-dim);margin-top:4px">
-                  예상 <strong style="color:var(--sun)">${planned.toFixed(2)}</strong> M/D → 실적 <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${actual.toFixed(2)}</strong> M/D
-                  ${planned>0?`<span style="color:${pct<=100?'#29B6F6':'var(--red)'}"> (${pct}%)</span>`:''}
+              <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
+                <span class="drag-handle plan-drag" style="cursor:grab;font-size:15px;color:var(--text-dim);padding-top:2px;user-select:none">☰</span>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:700">${p.category}${badge}${completedDateHtml}</div>
+                  ${p.note?`<div style="font-size:12px;color:var(--text-dim);margin-top:2px">${p.note}</div>`:''}
+                  <div style="font-size:12px;color:var(--text-dim);margin-top:4px">
+                    예상 <strong style="color:var(--sun)">${planned.toFixed(2)}</strong> M/D → 실적 <strong style="color:${actual<=planned?'#29B6F6':'var(--red)'}">${actual.toFixed(2)}</strong> M/D
+                    ${planned>0?`<span style="color:${pct<=100?'#29B6F6':'var(--red)'}"> (${pct}%)</span>`:''}
+                  </div>
+                  ${!p.is_completed&&actual>0?`<div style="margin-top:6px;background:var(--sky-dark);border-radius:4px;height:5px;overflow:hidden"><div style="height:100%;width:${Math.min(pct,100)}%;background:${pct<=100?'#29B6F6':'var(--red)'};transition:width 0.4s"></div></div>`:''}
                 </div>
-                ${!p.is_completed&&actual>0?`<div style="margin-top:6px;background:var(--sky-dark);border-radius:4px;height:5px;overflow:hidden"><div style="height:100%;width:${Math.min(pct,100)}%;background:${pct<=100?'#29B6F6':'var(--red)'};transition:width 0.4s"></div></div>`:''}
               </div>
-              <div style="display:flex;gap:5px;margin-left:8px">
+              <div style="display:flex;gap:5px;margin-left:8px;flex-shrink:0">
                 ${!p.is_completed?`<button class="btn bg bsm" onclick="openCompleteModal(${p.id},${planned},${actual})">완료</button>`:''}
                 <button class="btn bs bsm" onclick="openEditPlanModal(${p.id})">✏️</button>
                 <button class="btn bd bsm" onclick="deletePlan(${p.id})">삭제</button>
               </div>
             </div>
           </div>`;
-        }).join('')}
+        }).join('')}</div>`}
     </div>`;
 
   el.innerHTML=siteCard+statsHtml+planHtml;
+  // 계획 순서 드래그 초기화
+  const plist=document.getElementById('plan-list-sortable');
+  if(plist&&window.Sortable){
+    Sortable.create(plist,{
+      handle:'.plan-drag',animation:150,
+      onEnd:async()=>{
+        const items=[...plist.querySelectorAll('[data-plan-id]')];
+        const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id'))));
+        await Promise.all(updates);
+      }
+    });
+  }
 }
 
 // ── 계획 ──
@@ -859,7 +899,7 @@ async function loadLogs(){
         return `<div class="log-sub-row">
           <div class="log-sub-info">
             <div class="log-sub-name">${l.sub_category}</div>
-            ${l.detail?`<div class="log-sub-detail">${l.detail}</div>`:''}
+            ${l.detail?`<div class="log-sub-detail">💬 ${l.detail}</div>`:''}
             <div class="log-sub-stats">
               <span class="stat-pill workers">👷 ${workers}명</span>
               ${hours>0?`<span class="stat-pill hours">⏱ ${hours}h</span>`:''}
@@ -893,13 +933,22 @@ async function loadLogs(){
       </div>`;
     }).join('');
 
+    // 시간 및 특이사항 (그룹 내 첫 번째 항목 기준)
+    const startT=items[0].start_time||'';
+    const endT=items[0].end_time||'';
+    const memo=items[0].memo||'';
+    const timeStr=startT&&endT?` · ${startT}~${endT}`:'';
     return `<div class="log-group">
       <div class="log-group-header" onclick="toggleLogGroup(this)">
-        <div>
-          <div class="log-group-date">${date} ${weather}</div>
-          <div class="log-group-meta">${cats} · 총 ${totalMd.toFixed(2)} M/D · ${maxWorkers}명${manager?' · '+manager:''}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="log-group-date">${date} ${weather}</div>
+            <button class="btn bs bsm" onclick="event.stopPropagation();openDateGroupEdit('${date}')" style="padding:3px 8px;font-size:10px">✏️</button>
+          </div>
+          <div class="log-group-meta">${cats} · 총 ${totalMd.toFixed(2)} M/D · ${maxWorkers}명${manager?' · '+manager:''}${timeStr}</div>
+          ${memo?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">📝 ${memo}</div>`:''}
         </div>
-        <span style="color:var(--text-dim);font-size:12px">${isLatest?'▼':'▶'}</span>
+        <span style="color:var(--text-dim);font-size:12px;flex-shrink:0;margin-left:8px">${isLatest?'▼':'▶'}</span>
       </div>
       <div class="log-group-body" style="display:${isLatest?'block':'none'}">${catBlocksHtml}</div>
     </div>`;
@@ -908,9 +957,36 @@ async function loadLogs(){
 
 function toggleLogGroup(header){
   const body=header.nextElementSibling;
-  const arrow=header.querySelector('span');
-  if(body.style.display==='none'){ body.style.display='block'; arrow.textContent='▼'; }
-  else{ body.style.display='none'; arrow.textContent='▶'; }
+  const arrow=header.querySelector('span[style]');
+  if(body.style.display==='none'){ body.style.display='block'; if(arrow) arrow.textContent='▼'; }
+  else{ body.style.display='none'; if(arrow) arrow.textContent='▶'; }
+}
+
+async function openDateGroupEdit(date){
+  // 해당 날짜의 첫 번째 레코드에서 시간/메모/확인자 가져오기
+  const{data}=await sbClient.from('daily_logs').select('start_time,end_time,memo,manager').eq('work_date',date).limit(1).single();
+  document.getElementById('dge-date').value=date;
+  document.getElementById('dge-start').value=data?.start_time||'08:00';
+  document.getElementById('dge-end').value=data?.end_time||'17:00';
+  document.getElementById('dge-manager').value=data?.manager||'';
+  document.getElementById('dge-memo').value=data?.memo||'';
+  document.getElementById('date-group-edit-modal').classList.add('open');
+}
+
+async function saveDateGroupEdit(){
+  const date=document.getElementById('dge-date').value;
+  const start=document.getElementById('dge-start').value;
+  const end=document.getElementById('dge-end').value;
+  const manager=document.getElementById('dge-manager').value;
+  const memo=document.getElementById('dge-memo').value;
+  // 해당 날짜 모든 레코드 일괄 업데이트
+  const{error}=await sbClient.from('daily_logs').update({
+    start_time:start, end_time:end, manager, memo
+  }).eq('work_date',date);
+  if(error){ toast('수정 실패: '+error.message,'err'); return; }
+  document.getElementById('date-group-edit-modal').classList.remove('open');
+  toast('수정됨 ✓','ok');
+  loadLogs();
 }
 
 // ═══════════════════════════════════════════
@@ -1137,7 +1213,34 @@ function openLogModal(){
   sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   if(currentSiteId) sel.value=currentSiteId;
   addCatBlock();
+  // 시작/종료 시간 변경 시 모든 소분류 행 시간 자동 업데이트
+  ['log-start','log-end'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.oninput=()=>syncAllSubHours();
+  });
   document.getElementById('log-modal').classList.add('open');
+}
+
+function syncAllSubHours(){
+  const s=document.getElementById('log-start')?.value||'08:00';
+  const e=document.getElementById('log-end')?.value||'17:00';
+  if(!s||!e) return;
+  const [sh,sm]=s.split(':').map(Number);
+  const [eh,em]=e.split(':').map(Number);
+  const diffH=Math.round(((eh*60+em)-(sh*60+sm))/60*100)/100;
+  if(diffH<=0) return;
+  // 모든 소분류 행 시간 업데이트
+  document.querySelectorAll('#work-rows [id^="srh-"]').forEach(el=>{
+    const sid=el.id.replace('srh-','');
+    // cid 찾기
+    const srEl=document.getElementById('sr-'+sid);
+    if(!srEl) return;
+    const cbEl=srEl.closest('[id^="cb-"]');
+    if(!cbEl) return;
+    const cid=cbEl.id.replace('cb-','');
+    el.value=diffH;
+    calcSrMd(sid,cid);
+  });
 }
 
 async function openEditLog(id){
