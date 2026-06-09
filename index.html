@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0F2027">
 <title>태양광 작업일지</title>
 <link rel="manifest" href="manifest.json">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root {
   --sun: #F5A623;--sun-light: #FFD580;--sky: #1A6B8A;--sky-dark: #0F2027;
@@ -255,7 +255,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 <div class="toast" id="toast"></div>
 
 <script>
-let supabase=null,workTypes=[],sites=[],selectedPhotos=[],currentSiteId=null;
+let sbClient=null,workTypes=[],sites=[],selectedPhotos=[],currentSiteId=null;
 
 function loadConfig(){
   const url=localStorage.getItem('sb_url'),key=localStorage.getItem('sb_key');
@@ -264,7 +264,7 @@ function loadConfig(){
   if(url&&key){initSupabase(url,key);return true;}
   return false;
 }
-function initSupabase(url,key){supabase=window.supabase.createClient(url,key);}
+function initSupabase(url,key){sbClient=window.supabase.createClient(url,key);}
 function saveConfig(){
   const url=document.getElementById('sb-url').value.trim(),key=document.getElementById('sb-key').value.trim();
   if(!url||!key){showToast('URL과 Key를 입력하세요','error');return;}
@@ -274,7 +274,7 @@ function saveConfig(){
 }
 
 async function loadAll(){
-  if(!supabase)return;
+  if(!sbClient)return;
   await Promise.all([loadWorkTypes(),loadSites()]);
   loadDashboard();loadLogs();loadSummary();
 }
@@ -312,8 +312,8 @@ function switchTab(tab){
 }
 
 async function loadDashboard(){
-  if(!supabase)return;
-  const{data:logs}=await supabase.from('daily_logs').select('*');
+  if(!sbClient)return;
+  const{data:logs}=await sbClient.from('daily_logs').select('*');
   if(!logs)return;
   const totalMd=logs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
   const totalDays=new Set(logs.map(l=>l.work_date)).size;
@@ -357,8 +357,8 @@ async function loadDashboard(){
 }
 
 async function loadLogs(){
-  if(!supabase)return;
-  let q=supabase.from('daily_logs').select('*,photos(id,url)').order('work_date',{ascending:false});
+  if(!sbClient)return;
+  let q=sbClient.from('daily_logs').select('*,photos(id,url)').order('work_date',{ascending:false});
   const from=document.getElementById('filter-date-from')?.value,to=document.getElementById('filter-date-to')?.value;
   if(from)q=q.gte('work_date',from);
   if(to)q=q.lte('work_date',to);
@@ -385,8 +385,8 @@ async function loadLogs(){
 }
 
 async function loadSummary(){
-  if(!supabase)return;
-  let q=supabase.from('daily_logs').select('*');
+  if(!sbClient)return;
+  let q=sbClient.from('daily_logs').select('*');
   const from=document.getElementById('sum-date-from')?.value,to=document.getElementById('sum-date-to')?.value;
   if(from)q=q.gte('work_date',from);
   if(to)q=q.lte('work_date',to);
@@ -426,8 +426,8 @@ async function loadSummary(){
 }
 
 async function loadWorkTypes(){
-  if(!supabase)return;
-  const{data}=await supabase.from('work_types').select('*').order('category');
+  if(!sbClient)return;
+  const{data}=await sbClient.from('work_types').select('*').order('category');
   workTypes=data||[];
   renderWorkTypeList();populateCategorySelect();
 }
@@ -458,20 +458,20 @@ function filterSubCategory(){
 async function addWorkType(){
   const cat=document.getElementById('new-category').value.trim(),sub=document.getElementById('new-sub-category').value.trim();
   if(!cat||!sub){showToast('대분류와 소분류를 입력하세요','error');return;}
-  const{error}=await supabase.from('work_types').insert({category:cat,sub_category:sub});
+  const{error}=await sbClient.from('work_types').insert({category:cat,sub_category:sub});
   if(error){showToast('추가 실패','error');return;}
   document.getElementById('new-category').value='';document.getElementById('new-sub-category').value='';
   await loadWorkTypes();showToast('공종 추가됨 ✓','success');
 }
 async function deleteWorkType(id){
   if(!confirm('이 공종을 삭제할까요?'))return;
-  await supabase.from('work_types').delete().eq('id',id);
+  await sbClient.from('work_types').delete().eq('id',id);
   await loadWorkTypes();showToast('삭제됨','success');
 }
 
 async function loadSites(){
-  if(!supabase)return;
-  const{data}=await supabase.from('sites').select('*').order('created_at');
+  if(!sbClient)return;
+  const{data}=await sbClient.from('sites').select('*').order('created_at');
   sites=data||[];renderSiteList();populateSiteSelect();
 }
 function renderSiteList(){
@@ -499,14 +499,14 @@ function selectSite(id,name){
 async function addSite(){
   const name=document.getElementById('new-site-name').value.trim();
   if(!name){showToast('현장명을 입력하세요','error');return;}
-  const{error}=await supabase.from('sites').insert({name,client:document.getElementById('new-site-client').value.trim(),contractor:document.getElementById('new-site-contractor').value.trim(),start_date:document.getElementById('new-site-start').value||null,end_date:document.getElementById('new-site-end').value||null});
+  const{error}=await sbClient.from('sites').insert({name,client:document.getElementById('new-site-client').value.trim(),contractor:document.getElementById('new-site-contractor').value.trim(),start_date:document.getElementById('new-site-start').value||null,end_date:document.getElementById('new-site-end').value||null});
   if(error){showToast('추가 실패','error');return;}
   ['new-site-name','new-site-client','new-site-contractor','new-site-start','new-site-end'].forEach(id=>document.getElementById(id).value='');
   await loadSites();showToast('현장 추가됨 ✓','success');
 }
 async function deleteSite(id){
   if(!confirm('현장을 삭제할까요?'))return;
-  await supabase.from('sites').delete().eq('id',id);
+  await sbClient.from('sites').delete().eq('id',id);
   await loadSites();showToast('삭제됨','success');
 }
 
@@ -528,7 +528,7 @@ function openLogModal(){
   document.getElementById('log-modal').classList.add('open');
 }
 async function openEditLog(id){
-  const{data:l}=await supabase.from('daily_logs').select('*,photos(*)').eq('id',id).single();
+  const{data:l}=await sbClient.from('daily_logs').select('*,photos(*)').eq('id',id).single();
   if(!l)return;
   document.getElementById('log-modal-title').textContent='✏️ 작업일지 수정';
   document.getElementById('log-edit-id').value=id;
@@ -550,7 +550,7 @@ async function openEditLog(id){
   if(l.photos){l.photos.forEach(p=>{const div=document.createElement('div');div.className='photo-preview-item';div.innerHTML=`<img src="${p.url}"><button class="photo-remove" onclick="removeExistingPhoto(${p.id},this.parentNode)">✕</button>`;preview.appendChild(div);});}
   document.getElementById('log-modal').classList.add('open');
 }
-async function removeExistingPhoto(id,el){await supabase.from('photos').delete().eq('id',id);el.remove();}
+async function removeExistingPhoto(id,el){await sbClient.from('photos').delete().eq('id',id);el.remove();}
 function closeLogModal(){document.getElementById('log-modal').classList.remove('open');selectedPhotos=[];}
 function calcManday(){
   const w=parseFloat(document.getElementById('log-workers').value)||0,h=parseFloat(document.getElementById('log-hours').value)||8;
@@ -568,8 +568,8 @@ function handlePhotoSelect(e){
 async function uploadPhotos(logId){
   for(const file of selectedPhotos.filter(p=>p)){
     const ext=file.name.split('.').pop(),path=`${logId}/${Date.now()}.${ext}`;
-    const{error}=await supabase.storage.from('worklog-photos').upload(path,file);
-    if(!error){const{data:u}=supabase.storage.from('worklog-photos').getPublicUrl(path);await supabase.from('photos').insert({log_id:logId,url:u.publicUrl});}
+    const{error}=await sbClient.storage.from('worklog-photos').upload(path,file);
+    if(!error){const{data:u}=sbClient.storage.from('worklog-photos').getPublicUrl(path);await sbClient.from('photos').insert({log_id:logId,url:u.publicUrl});}
   }
 }
 async function saveLog(){
@@ -580,21 +580,21 @@ async function saveLog(){
   const payload={work_date:date,work_type_id:wtObj?.id||null,category:cat,sub_category:sub,detail:document.getElementById('log-detail').value,manday,workers:parseInt(document.getElementById('log-workers').value)||null,start_time:document.getElementById('log-start-time').value,end_time:document.getElementById('log-end-time').value,weather:document.getElementById('log-weather').value,manager:document.getElementById('log-manager').value,memo:document.getElementById('log-memo').value,site_name:sites.find(s=>s.id==siteId)?.name||null};
   const editId=document.getElementById('log-edit-id').value;
   let logId;
-  if(editId){const{error}=await supabase.from('daily_logs').update(payload).eq('id',editId);if(error){showToast('수정 실패: '+error.message,'error');return;}logId=editId;}
-  else{const{data,error}=await supabase.from('daily_logs').insert(payload).select().single();if(error){showToast('저장 실패: '+error.message,'error');return;}logId=data.id;}
+  if(editId){const{error}=await sbClient.from('daily_logs').update(payload).eq('id',editId);if(error){showToast('수정 실패: '+error.message,'error');return;}logId=editId;}
+  else{const{data,error}=await sbClient.from('daily_logs').insert(payload).select().single();if(error){showToast('저장 실패: '+error.message,'error');return;}logId=data.id;}
   if(selectedPhotos.filter(p=>p).length)await uploadPhotos(logId);
   closeLogModal();showToast('저장 완료 ✓','success');
   await loadLogs();await loadDashboard();await loadSummary();
 }
 async function deleteLog(id){
   if(!confirm('이 작업일지를 삭제할까요?'))return;
-  await supabase.from('daily_logs').delete().eq('id',id);
+  await sbClient.from('daily_logs').delete().eq('id',id);
   await loadLogs();await loadDashboard();await loadSummary();showToast('삭제됨','success');
 }
 
 function openExportModal(){document.getElementById('export-modal').classList.add('open');}
 async function exportCSV(){
-  const{data:logs}=await supabase.from('daily_logs').select('*').order('work_date');
+  const{data:logs}=await sbClient.from('daily_logs').select('*').order('work_date');
   if(!logs||!logs.length){showToast('데이터가 없습니다','error');return;}
   const h=['날짜','현장','대분류','소분류','세부내용','투입인원','맨데이','시작','종료','날씨','확인자','메모'];
   const rows=logs.map(l=>[l.work_date,l.site_name||'',l.category,l.sub_category,l.detail||'',l.workers||'',l.manday,l.start_time||'',l.end_time||'',l.weather||'',l.manager||'',l.memo||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
@@ -604,7 +604,7 @@ async function exportCSV(){
   document.getElementById('export-modal').classList.remove('open');
 }
 async function exportJSON(){
-  const{data:logs}=await supabase.from('daily_logs').select('*,photos(*)').order('work_date');
+  const{data:logs}=await sbClient.from('daily_logs').select('*,photos(*)').order('work_date');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(logs,null,2)],{type:'application/json'}));
   a.download=`작업일지_${new Date().toISOString().split('T')[0]}.json`;a.click();
   document.getElementById('export-modal').classList.remove('open');
