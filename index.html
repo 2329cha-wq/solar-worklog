@@ -330,8 +330,14 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
       <div class="fg"><label class="fl">확인자</label><input type="text" class="fi" id="log-manager"></div>
     </div>
     <div class="fr">
-      <div class="fg"><label class="fl">시작시간</label><input type="time" class="fi" id="log-start" value="08:00"></div>
-      <div class="fg"><label class="fl">종료시간</label><input type="time" class="fi" id="log-end" value="17:00"></div>
+      <div class="fg"><label class="fl">시작시간</label><input type="time" class="fi" id="log-start" value="08:00" oninput="updateTimeDisplay()"></div>
+      <div class="fg"><label class="fl">종료시간</label><input type="time" class="fi" id="log-end" value="17:00" oninput="updateTimeDisplay()"></div>
+    </div>
+    <div id="time-display" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(41,182,246,0.08);border:1px solid rgba(41,182,246,0.2);border-radius:8px;margin-bottom:10px;font-size:13px">
+      <span style="color:#7EC8E3;font-weight:600" id="time-total">⏱ 8.00h</span>
+      <span style="color:var(--text-dim)">( 점심 1시간 제외 →</span>
+      <span style="color:var(--sun);font-weight:700" id="time-net">실작업 7.00h</span>
+      <span style="color:var(--text-dim)">)</span>
     </div>
     <div class="fg"><label class="fl">특이사항</label><input type="text" class="fi" id="log-memo"></div>
 
@@ -454,9 +460,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
     <img id="photo-viewer-img" src="" style="max-width:92vw;max-height:82vh;object-fit:contain;border-radius:8px;display:block">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
       <button class="btn bs bsm" onclick="closePhotoViewer()">✕ 닫기</button>
-      <a id="photo-viewer-dl" href="" download style="text-decoration:none">
-        <button class="btn bp bsm">📥 다운로드</button>
-      </a>
+      <button class="btn bp bsm" id="photo-viewer-dl-btn" onclick="downloadViewerPhoto()">📥 다운로드</button>
     </div>
   </div>
 </div>
@@ -1268,6 +1272,7 @@ function openLogModal(){
   document.getElementById('log-manager').value='';
   document.getElementById('log-start').value='08:00';
   document.getElementById('log-end').value='17:00';
+  setTimeout(()=>updateTimeDisplay(),30);
   document.getElementById('work-rows').innerHTML='';
   catBlockCount=0; subRowCount=0;
   Object.keys(rowPhotos).forEach(k=>delete rowPhotos[k]);
@@ -1283,6 +1288,23 @@ function openLogModal(){
   document.getElementById('log-modal').classList.add('open');
 }
 
+function updateTimeDisplay(){
+  const s=document.getElementById('log-start')?.value||'';
+  const e=document.getElementById('log-end')?.value||'';
+  const totalEl=document.getElementById('time-total');
+  const netEl=document.getElementById('time-net');
+  if(!s||!e||!totalEl) return;
+  const [sh,sm]=s.split(':').map(Number);
+  const [eh,em]=e.split(':').map(Number);
+  const diffH=Math.round(((eh*60+em)-(sh*60+sm))/60*100)/100;
+  if(diffH<=0){ totalEl.textContent='⏱ -'; netEl.textContent='실작업 -'; return; }
+  const netH=Math.max(0, Math.round((diffH-1)*100)/100);
+  totalEl.textContent=`⏱ ${diffH.toFixed(2)}h`;
+  netEl.textContent=`실작업 ${netH.toFixed(2)}h`;
+  // 소분류 행도 함께 업데이트
+  syncAllSubHours();
+}
+
 function syncAllSubHours(){
   const s=document.getElementById('log-start')?.value||'08:00';
   const e=document.getElementById('log-end')?.value||'17:00';
@@ -1291,10 +1313,8 @@ function syncAllSubHours(){
   const [eh,em]=e.split(':').map(Number);
   const diffH=Math.round(((eh*60+em)-(sh*60+sm))/60*100)/100;
   if(diffH<=0) return;
-  // 모든 소분류 행 시간 업데이트
   document.querySelectorAll('#work-rows [id^="srh-"]').forEach(el=>{
     const sid=el.id.replace('srh-','');
-    // cid 찾기
     const srEl=document.getElementById('sr-'+sid);
     if(!srEl) return;
     const cbEl=srEl.closest('[id^="cb-"]');
@@ -1754,8 +1774,16 @@ async function exportCSV(){
 // 사진 뷰어
 function openPhotoViewer(url){
   document.getElementById('photo-viewer-img').src=url;
-  document.getElementById('photo-viewer-dl').href=url;
+  document.getElementById('photo-viewer-dl-btn').dataset.url=url;
   document.getElementById('photo-viewer-modal').classList.add('open');
+}
+async function downloadViewerPhoto(){
+  const url=document.getElementById('photo-viewer-dl-btn').dataset.url;
+  if(!url) return;
+  const ext=url.split('?')[0].split('.').pop()||'jpg';
+  const filename='photo_'+Date.now()+'.'+ext;
+  const ok=await downloadPhotoAsBlob(url, filename);
+  if(!ok) toast('다운로드 실패','err');
 }
 function closePhotoViewer(){
   document.getElementById('photo-viewer-modal').classList.remove('open');
