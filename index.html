@@ -1055,14 +1055,30 @@ function removeCatPhoto(key,pidx,el){ if(rowPhotos[key]) rowPhotos[key][pidx]=nu
 
 async function uploadCatPhotos(logId,cid){
   const key=`cat-${cid}`;
-  if(!rowPhotos[key]) return;
-  for(const f of rowPhotos[key].filter(p=>p)){
-    const ext=f.name.split('.').pop();
-    const path=`${logId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const{error}=await sbClient.storage.from('worklog-photos').upload(path,f);
-    if(!error){
-      const{data:u}=sbClient.storage.from('worklog-photos').getPublicUrl(path);
-      await sbClient.from('photos').insert({log_id:logId, url:u.publicUrl});
+  if(!rowPhotos[key]||!rowPhotos[key].filter(p=>p).length) return;
+  const files=rowPhotos[key].filter(p=>p);
+  for(const f of files){
+    // 파일 확장자 안전하게 처리
+    const nameParts=f.name.split('.');
+    const ext=nameParts.length>1?nameParts.pop().toLowerCase():'jpg';
+    const safeExt=['jpg','jpeg','png','gif','webp','heic','heif'].includes(ext)?ext:'jpg';
+    const path=`${logId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${safeExt}`;
+    const{data:upData, error:upErr}=await sbClient.storage.from('worklog-photos').upload(path,f,{
+      contentType: f.type||'image/jpeg',
+      upsert: false
+    });
+    if(upErr){
+      console.error('사진 업로드 실패:', upErr.message, path);
+      toast('사진 업로드 실패: '+upErr.message,'err');
+      continue;
+    }
+    const{data:urlData}=sbClient.storage.from('worklog-photos').getPublicUrl(path);
+    if(urlData?.publicUrl){
+      const{error:dbErr}=await sbClient.from('photos').insert({log_id:logId, url:urlData.publicUrl});
+      if(dbErr){
+        console.error('사진 DB 저장 실패:', dbErr.message);
+        toast('사진 DB 저장 실패: '+dbErr.message,'err');
+      }
     }
   }
 }
@@ -1199,6 +1215,9 @@ async function saveLog(){
     }
     for(const pm of photoMap){ await uploadCatPhotos(insertedIds[pm.pIdx],pm.cid); }
   }
+  // 사진 업로드 (있는 경우)
+  const hasPhotos=Object.values(rowPhotos).some(arr=>arr&&arr.filter(p=>p).length>0);
+  if(hasPhotos) toast('사진 업로드 중...','');
   closeLogModal();
   toast(`${payloads.length}개 작업 저장 완료 ✓`,'ok');
   initDateFilters().then(()=>{ loadLogs(); loadDashboard(); loadSummary(); });
