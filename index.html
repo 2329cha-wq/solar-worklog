@@ -143,13 +143,15 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 @media(min-width:480px){.stat-grid{grid-template-columns:repeat(4,1fr)}}
 /* 작업일지 대분류 그룹 스타일 */
 .log-cat-block{margin-bottom:16px}
-.log-cat-block-header{display:flex;align-items:center;gap:8px;padding:7px 0 9px;border-bottom:2px solid rgba(245,166,35,0.3);margin-bottom:0}
-.log-cat-block-name{font-size:14px;font-weight:700;color:var(--sun)}
-.log-cat-block-total{font-size:12px;color:var(--text-dim);margin-left:auto}
-.log-sub-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:9px 0 9px 12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.log-cat-block-header{display:flex;align-items:center;gap:8px;padding:9px 0 11px;border-bottom:3px solid rgba(245,166,35,0.4);margin-bottom:0}
+.log-cat-block-name{font-size:17px;font-weight:700;color:var(--sun)}
+.log-cat-block-total{font-size:13px;color:var(--text-dim);margin-left:auto}
+.log-cat-edit-btn{background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.4);color:var(--sun);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.log-sub-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 0 10px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .log-sub-row:last-child{border-bottom:none}
-.log-sub-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
-.log-sub-detail{font-size:12px;color:var(--text-dim);margin-bottom:5px;line-height:1.45}
+.log-sub-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.log-sub-detail{background:rgba(255,255,255,0.05);border-left:2px solid rgba(126,200,227,0.5);border-radius:0 6px 6px 0;padding:5px 9px;font-size:13px;color:#B0D4E8;margin-bottom:6px;line-height:1.5}
+.log-date-memo{background:rgba(245,166,35,0.1);border-left:3px solid var(--sun);border-radius:0 6px 6px 0;padding:6px 10px;font-size:13px;font-weight:600;color:var(--text);margin-top:5px;line-height:1.5}
 .log-sub-stats{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .stat-pill{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;border-radius:10px;padding:2px 9px}
 .stat-pill.workers{background:rgba(126,200,227,0.12);color:#7EC8E3}
@@ -180,10 +182,11 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   .log-group-meta{font-size:13px}
   .log-group-header{padding:14px 20px}
   .log-group-body{padding:14px 20px}
-  .log-cat-block-name{font-size:16px}
-  .log-cat-block-total{font-size:13px}
-  .log-sub-name{font-size:15px}
-  .log-sub-detail{font-size:13px}
+  .log-cat-block-name{font-size:19px}
+  .log-cat-block-total{font-size:14px}
+  .log-sub-name{font-size:16px}
+  .log-sub-detail{font-size:14px}
+  .log-date-memo{font-size:14px}
   .stat-pill{font-size:13px;padding:3px 10px}
   .sum-table{font-size:14px}
   .sum-table th{font-size:13px;padding:11px 10px}
@@ -420,14 +423,17 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 
 <!-- 내보내기 모달 -->
 <div class="modal-overlay" id="export-modal">
-  <div class="modal" style="max-height:50vh">
+  <div class="modal" style="max-height:65vh">
     <div class="modal-title">📊 데이터 내보내기<button class="modal-close" onclick="document.getElementById('export-modal').classList.remove('open')">✕</button></div>
     <div class="fr">
       <div class="fg"><label class="fl">시작일</label><input type="date" class="fi" id="exp-from"></div>
       <div class="fg"><label class="fl">종료일</label><input type="date" class="fi" id="exp-to"></div>
     </div>
-    <button class="btn bg bfull" onclick="exportCSV()" style="margin-bottom:8px">📥 CSV 다운로드</button>
-    <button class="btn bs bfull" onclick="exportPhotos()">📷 사진 전체 다운로드</button>
+    <button class="btn bg bfull" onclick="exportCSV()" style="margin-bottom:10px">📥 CSV 다운로드</button>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:8px">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">📷 사진 다운로드 — 위 날짜 범위 기준</div>
+      <button class="btn bs bfull" onclick="exportPhotosRange()">📷 날짜 범위 사진 다운로드</button>
+    </div>
   </div>
 </div>
 
@@ -925,8 +931,8 @@ async function loadLogs(){
             </div>
           </div>
           <div class="log-sub-actions">
-            <button class="btn bs bsm" onclick="openEditLog(${l.id})">✏️</button>
-            <button class="btn bd bsm" onclick="deleteLog(${l.id})">🗑</button>
+            <button class="btn bs bsm" onclick="openEditSubLog(${l.id})" title="소분류 수정">✏️</button>
+            <button class="btn bd bsm" onclick="deleteLog(${l.id})" title="삭제">🗑</button>
           </div>
         </div>`;
       }).join('');
@@ -946,6 +952,8 @@ async function loadLogs(){
         <div class="log-cat-block-header">
           <span class="log-cat-block-name">📁 ${cat}</span>
           <span class="log-cat-block-total">${catMd.toFixed(2)} M/D${allCatPhotos.length?' · 📷'+allCatPhotos.length:''}</span>
+          <button class="log-cat-edit-btn" onclick="openEditLog(${catItems[0].id})" title="${cat} 전체 수정">✏️ 수정</button>
+          <button class="btn bs bsm" onclick="downloadDatePhotos('${date}','${cat}')" title="이 대분류 사진 다운로드" style="padding:4px 8px;font-size:11px">📥</button>
         </div>
         ${subsHtml}${photosHtml}
       </div>`;
@@ -959,13 +967,14 @@ async function loadLogs(){
     return `<div class="log-group">
       <div class="log-group-header" onclick="toggleLogGroup(this)">
         <div style="flex:1">
-          <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <div class="log-group-date">${date} ${weather}</div>
             <button class="btn bs bsm" onclick="event.stopPropagation();openDateGroupEdit('${date}')" style="padding:3px 8px;font-size:10px">✏️</button>
             <button class="btn bd bsm" onclick="event.stopPropagation();deleteLogGroup('${date}')" style="padding:3px 8px;font-size:10px">🗑</button>
+            <button class="btn bs bsm" onclick="event.stopPropagation();downloadDatePhotos('${date}',null)" style="padding:3px 8px;font-size:10px;color:var(--sun);border-color:rgba(245,166,35,0.4)">📥 사진</button>
           </div>
           <div class="log-group-meta">${cats} · 총 ${totalMd.toFixed(2)} M/D · ${maxWorkers}명${manager?' · '+manager:''}${timeStr}</div>
-          ${memo?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">📝 ${memo}</div>`:''}
+          ${memo?`<div class="log-date-memo">📝 ${memo}</div>`:''}
         </div>
         <span style="color:var(--text-dim);font-size:12px;flex-shrink:0;margin-left:8px">${isLatest?'▼':'▶'}</span>
       </div>
@@ -1392,8 +1401,14 @@ async function saveLog(){
   }
   if(!payloads.length){ toast('작업 항목을 추가하세요','err'); return; }
   const editId=document.getElementById('log-edit-group').value;
-  if(editId && editId.startsWith('DATE:')){
-    // 날짜 기준 전체 수정: 기존 레코드 삭제 후 재삽입
+  if(editId && editId.startsWith('SUB:')){
+    // 소분류 단건 수정
+    const subId=editId.replace('SUB:','');
+    const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',subId);
+    if(error){ toast('수정 실패: '+error.message,'err'); return; }
+    for(const pm of photoMap){ if(pm.pIdx===0) await uploadCatPhotos(subId,pm.cid); }
+  } else if(editId && editId.startsWith('DATE:')){
+    // 날짜 전체 수정: 삭제 후 재삽입
     const editDate=editId.replace('DATE:','');
     const{error:delErr}=await sbClient.from('daily_logs').delete().eq('work_date',editDate);
     if(delErr){ toast('수정 실패: '+delErr.message,'err'); return; }
@@ -1727,17 +1742,79 @@ function closePhotoViewer(){
 }
 
 // 사진 내보내기 (zip 없이 순차 다운로드)
-async function exportPhotos(){
+// 소분류 단건 수정 모달
+async function openEditSubLog(id){
+  const{data:l}=await sbClient.from('daily_logs').select('*').eq('id',id).single();
+  if(!l) return;
+  document.getElementById('log-modal-title').textContent='✏️ 소분류 수정';
+  document.getElementById('log-edit-group').value='SUB:'+id;
+  document.getElementById('log-date').value=l.work_date;
+  document.getElementById('log-weather').value=l.weather||'☀️ 맑음';
+  document.getElementById('log-memo').value=l.memo||'';
+  document.getElementById('log-manager').value=l.manager||'';
+  document.getElementById('log-start').value=l.start_time||'08:00';
+  document.getElementById('log-end').value=l.end_time||'17:00';
+  document.getElementById('work-rows').innerHTML='';
+  catBlockCount=0; subRowCount=0;
+  Object.keys(rowPhotos).forEach(k=>delete rowPhotos[k]);
+  const sel=document.getElementById('log-site');
+  sel.innerHTML='<option value="">현장 선택</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const siteId=sites.find(s=>s.name===l.site_name)?.id;
+  if(siteId) sel.value=siteId; else if(currentSiteId) sel.value=currentSiteId;
+  const _w=parseFloat(l.workers)||0, _md=parseFloat(l.manday)||0;
+  const _h=_w>0?Math.round(_md*8/_w*100)/100:8;
+  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday}]});
+  ['log-start','log-end'].forEach(elid=>{
+    const el=document.getElementById(elid);
+    if(el) el.oninput=()=>syncAllSubHours();
+  });
+  document.getElementById('log-modal').classList.add('open');
+}
+
+// 날짜(+대분류 옵션) 사진 다운로드
+async function downloadDatePhotos(date, cat){
+  toast('사진 불러오는 중...','');
+  let q=sbClient.from('photos').select('url,log_id,daily_logs(work_date,category)').eq('daily_logs.work_date',date);
+  const{data:photos,error}=await q;
+  if(error||!photos||!photos.length){ toast('사진이 없습니다','err'); return; }
+  // cat 필터 (null이면 전체)
+  const filtered=cat?photos.filter(p=>p.daily_logs?.category===cat):photos;
+  if(!filtered.length){ toast('해당 조건의 사진이 없습니다','err'); return; }
+  toast(`${filtered.length}장 다운로드 시작...`,'ok');
+  for(let i=0;i<filtered.length;i++){
+    const p=filtered[i];
+    const catName=(p.daily_logs?.category||'기타').replace(/[/\\:*?"<>|]/g,'_');
+    const ext=p.url.split('.').pop().split('?')[0]||'jpg';
+    const filename=`${date}_${catName}_${i+1}.${ext}`;
+    await new Promise(res=>{
+      const a=document.createElement('a');
+      a.href=p.url; a.download=filename; a.target='_blank';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(res,350);
+    });
+  }
+  toast(`${filtered.length}장 완료 ✓`,'ok');
+}
+
+// 날짜 범위 사진 다운로드 (내보내기 모달용)
+async function exportPhotosRange(){
+  const from=document.getElementById('exp-from')?.value;
+  const to=document.getElementById('exp-to')?.value;
   document.getElementById('export-modal').classList.remove('open');
   toast('사진 목록 불러오는 중...','');
-  const{data:photos,error}=await sbClient.from('photos').select('url,log_id,daily_logs(work_date,category,site_name)').order('log_id');
-  if(error||!photos||!photos.length){ toast('저장된 사진이 없습니다','err'); return; }
-  toast(`사진 ${photos.length}장 다운로드 시작...`,'ok');
-  // 순차적으로 a 태그 클릭으로 다운로드
+  let q=sbClient.from('photos').select('url,log_id,daily_logs(work_date,category,site_name)').order('log_id');
+  const{data:allPhotos,error}=await q;
+  if(error||!allPhotos||!allPhotos.length){ toast('저장된 사진이 없습니다','err'); return; }
+  let photos=allPhotos;
+  if(from) photos=photos.filter(p=>(p.daily_logs?.work_date||'')>=from);
+  if(to)   photos=photos.filter(p=>(p.daily_logs?.work_date||'')<=to);
+  if(!photos.length){ toast('해당 기간 사진이 없습니다','err'); return; }
+  toast(`${photos.length}장 다운로드 시작...`,'ok');
   for(let i=0;i<photos.length;i++){
     const p=photos[i];
     const date=p.daily_logs?.work_date||'unknown';
-    const cat=(p.daily_logs?.category||'기타').replace(/[/\:*?"<>|]/g,'_');
+    const cat=(p.daily_logs?.category||'기타').replace(/[/\\:*?"<>|]/g,'_');
     const ext=p.url.split('.').pop().split('?')[0]||'jpg';
     const filename=`${date}_${cat}_${i+1}.${ext}`;
     await new Promise(res=>{
@@ -1745,10 +1822,15 @@ async function exportPhotos(){
       a.href=p.url; a.download=filename; a.target='_blank';
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
-      setTimeout(res, 400); // 브라우저 다운로드 간격
+      setTimeout(res,350);
     });
   }
-  toast(`${photos.length}장 다운로드 완료 ✓`,'ok');
+  toast(`${photos.length}장 완료 ✓`,'ok');
+}
+
+// 헤더 사진 버튼 → 내보내기 모달 열기
+async function exportPhotos(){
+  document.getElementById('export-modal').classList.add('open');
 }
 
 // ═══════════════════════════════════════════
