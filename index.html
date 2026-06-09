@@ -347,8 +347,12 @@ function switchTab(tab){
 
 async function loadDashboard(){
   if(!sbClient)return;
-  const{data:logs}=await sbClient.from('daily_logs').select('*');
-  if(!logs)return;
+  const{data:logs,error:dbErr}=await sbClient.from('daily_logs').select('*');
+  if(dbErr){
+    document.getElementById('dashboard-content').innerHTML=`<div class="config-warning">⚠️ DB 오류: ${dbErr.message}<br><br>Supabase 연결을 확인하거나 설정 탭에서 키를 다시 입력해주세요.</div>`;
+    return;
+  }
+  if(!logs){document.getElementById('dashboard-content').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">데이터 없음</div></div>';return;}
   const totalMd=logs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
   const totalDays=new Set(logs.map(l=>l.work_date)).size;
   const totalWorkers=logs.reduce((s,l)=>s+parseInt(l.workers||0),0);
@@ -396,8 +400,9 @@ async function loadLogs(){
   const from=document.getElementById('filter-date-from')?.value,to=document.getElementById('filter-date-to')?.value;
   if(from)q=q.gte('work_date',from);
   if(to)q=q.lte('work_date',to);
-  const{data:logs}=await q;
+  const{data:logs,error:logErr}=await q;
   const el=document.getElementById('log-list-content');
+  if(logErr){el.innerHTML=`<div class='config-warning'>⚠️ 오류: ${logErr.message}</div>`;return;}
   if(!logs||!logs.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">작업일지가 없습니다.<br>새 작업일지를 작성해보세요.</div></div>`;return;}
   el.innerHTML=logs.map(l=>`
     <div class="log-item">
@@ -424,8 +429,9 @@ async function loadSummary(){
   const from=document.getElementById('sum-date-from')?.value,to=document.getElementById('sum-date-to')?.value;
   if(from)q=q.gte('work_date',from);
   if(to)q=q.lte('work_date',to);
-  const{data:logs}=await q;
+  const{data:logs,error:sumErr}=await q;
   const el=document.getElementById('summary-content');
+  if(sumErr){el.innerHTML=`<div class='config-warning'>⚠️ 오류: ${sumErr.message}</div>`;return;}
   if(!logs||!logs.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-text">집계할 데이터가 없습니다</div></div>`;return;}
   const catMap={};
   logs.forEach(l=>{
@@ -461,37 +467,59 @@ async function loadSummary(){
 
 async function loadWorkTypes(){
   if(!sbClient)return;
-  const{data}=await sbClient.from('work_types').select('*').order('category');
+  const{data}=await sbClient.from('work_types').select('*').order('sort_order',{ascending:true});
   workTypes=data||[];
   renderWorkTypeList();populateCategorySelect();
 }
 function renderWorkTypeList(){
   const el=document.getElementById('work-type-list');
-  if(!workTypes.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-text">대분류를 추가해보세요</div></div>';return;}
+  if(!workTypes.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">&#x1F5C2;&#xFE0F;</div><div class="empty-text">대분류를 추가해보세요</div></div>';return;}
+  const catOrder=[];
   const catMap={};
-  workTypes.forEach(wt=>{if(!catMap[wt.category])catMap[wt.category]=[];catMap[wt.category].push(wt);});
-  el.innerHTML=Object.entries(catMap).map(([cat,items])=>`
-    <div class="card" style="margin-bottom:12px">
+  workTypes.forEach(wt=>{
+    if(!catMap[wt.category]){catMap[wt.category]=[];catOrder.push(wt.category);}
+    catMap[wt.category].push(wt);
+  });
+  el.innerHTML=catOrder.map((cat,catIdx)=>{
+    const safeCat=cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="card" style="margin-bottom:12px">
       <div class="cat-header">
-        <div style="font-size:14px;font-weight:700;color:var(--sun)">${cat}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;line-height:1" onclick="moveCat('${safeCat}','up')" ${catIdx===0?'disabled':''}>&#9650;</button>
+            <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;line-height:1" onclick="moveCat('${safeCat}','down')" ${catIdx===catOrder.length-1?'disabled':''}>&#9660;</button>
+          </div>
+          <div style="font-size:14px;font-weight:700;color:var(--sun)">${cat}</div>
+        </div>
         <div class="cat-actions">
-          <button class="btn btn-secondary btn-sm" onclick="openSubModal('${cat.replace(/'/g,"\'")}')">＋ 소분류</button>
-          <button class="btn btn-secondary btn-sm" onclick="openEditCat('${cat.replace(/'/g,"\'")}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteCategory('${cat.replace(/'/g,"\'")}')">🗑</button>
+          <button class="btn btn-secondary btn-sm" onclick="openSubModal('${safeCat}')">+ 소분류</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditCat('${safeCat}')">수정</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCategory('${safeCat}')">삭제</button>
         </div>
       </div>
-      ${items.map(wt=>`
-        <div class="work-type-item">
-          <div class="work-type-name">${wt.sub_category}</div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-secondary btn-sm" onclick="openEditSub(${wt.id},'${wt.sub_category.replace(/'/g,"\'")}')">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteWorkType(${wt.id})">🗑</button>
+      ${catMap[cat].map((wt,subIdx)=>{
+        const safeSub=wt.sub_category.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return `<div class="work-type-item">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="display:flex;gap:2px">
+              <button class="btn btn-secondary btn-sm" style="padding:3px 6px;font-size:10px;line-height:1" onclick="moveSub(${wt.id},'up')" ${subIdx===0?'disabled':''}>&#9650;</button>
+              <button class="btn btn-secondary btn-sm" style="padding:3px 6px;font-size:10px;line-height:1" onclick="moveSub(${wt.id},'down')" ${subIdx===catMap[cat].length-1?'disabled':''}>&#9660;</button>
+            </div>
+            <div class="work-type-name">${wt.sub_category}</div>
           </div>
-        </div>`).join('')}
-    </div>`).join('');
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" onclick="openEditSub(${wt.id},'${safeSub}')">수정</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteWorkType(${wt.id})">삭제</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
 }
 function populateCategorySelect(){
-  const cats=[...new Set(workTypes.map(wt=>wt.category))];
+  // workTypes는 이미 sort_order 순으로 정렬됨 - 순서 유지
+  const cats=[];
+  workTypes.forEach(wt=>{if(!cats.includes(wt.category))cats.push(wt.category);});
   document.getElementById('log-category').innerHTML='<option value="">선택</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 
@@ -500,7 +528,8 @@ async function addCategory(){
   const cat=document.getElementById('new-category').value.trim();
   if(!cat){showToast('대분류명을 입력하세요','error');return;}
   if(workTypes.some(wt=>wt.category===cat)){showToast('이미 있는 대분류입니다','error');return;}
-  const{error}=await sbClient.from('work_types').insert({category:cat,sub_category:'(소분류 없음)'});
+  const maxOrder=workTypes.length?Math.max(...workTypes.map(w=>w.sort_order||0)):0;
+  const{error}=await sbClient.from('work_types').insert({category:cat,sub_category:'(소분류 없음)',sort_order:maxOrder+10});
   if(error){showToast('추가 실패','error');return;}
   document.getElementById('new-category').value='';
   await loadWorkTypes();showToast('대분류 추가됨 ✓','success');
@@ -518,7 +547,9 @@ function openSubModal(cat){
 async function addSubCategory(){
   const sub=document.getElementById('new-sub-input').value.trim();
   if(!sub){showToast('소분류명을 입력하세요','error');return;}
-  const{error}=await sbClient.from('work_types').insert({category:_subModalCat,sub_category:sub});
+  const catItems=workTypes.filter(w=>w.category===_subModalCat);
+  const maxOrder=catItems.length?Math.max(...catItems.map(w=>w.sort_order||0)):0;
+  const{error}=await sbClient.from('work_types').insert({category:_subModalCat,sub_category:sub,sort_order:maxOrder+1});
   if(error){showToast('추가 실패','error');return;}
   document.getElementById('sub-modal').classList.remove('open');
   await loadWorkTypes();showToast('소분류 추가됨 ✓','success');
@@ -561,6 +592,48 @@ async function saveNameEdit(){
   }
   document.getElementById('edit-name-modal').classList.remove('open');
   await loadWorkTypes();showToast('수정됨 ✓','success');
+}
+
+// 대분류 순서 이동
+async function moveCat(cat,dir){
+  const catOrder=[];
+  const catMap={};
+  workTypes.forEach(wt=>{
+    if(!catMap[wt.category]){catMap[wt.category]=[];catOrder.push(wt.category);}
+    catMap[wt.category].push(wt);
+  });
+  const idx=catOrder.indexOf(cat);
+  if(dir==='up'&&idx===0)return;
+  if(dir==='down'&&idx===catOrder.length-1)return;
+  const swapIdx=dir==='up'?idx-1:idx+1;
+  const swapCat=catOrder[swapIdx];
+  // 두 대분류의 sort_order 교환
+  const aItems=catMap[cat];
+  const bItems=catMap[swapCat];
+  const aMin=Math.min(...aItems.map(w=>w.sort_order));
+  const bMin=Math.min(...bItems.map(w=>w.sort_order));
+  const updates=[];
+  aItems.forEach(w=>updates.push(sbClient.from('work_types').update({sort_order:w.sort_order+(bMin-aMin)}).eq('id',w.id)));
+  bItems.forEach(w=>updates.push(sbClient.from('work_types').update({sort_order:w.sort_order+(aMin-bMin)}).eq('id',w.id)));
+  await Promise.all(updates);
+  await loadWorkTypes();
+}
+
+// 소분류 순서 이동
+async function moveSub(id,dir){
+  const wt=workTypes.find(w=>w.id===id);
+  if(!wt)return;
+  const siblings=workTypes.filter(w=>w.category===wt.category);
+  const idx=siblings.findIndex(w=>w.id===id);
+  if(dir==='up'&&idx===0)return;
+  if(dir==='down'&&idx===siblings.length-1)return;
+  const swapWt=siblings[dir==='up'?idx-1:idx+1];
+  const tmpOrder=wt.sort_order;
+  await Promise.all([
+    sbClient.from('work_types').update({sort_order:swapWt.sort_order}).eq('id',wt.id),
+    sbClient.from('work_types').update({sort_order:tmpOrder}).eq('id',swapWt.id)
+  ]);
+  await loadWorkTypes();
 }
 function filterSubCategory(){
   const cat=document.getElementById('log-category').value;
@@ -679,6 +752,7 @@ function removeWorkRow(idx){
 }
 function updateSubOpts(sel,idx){
   const cat=sel.value;
+  // workTypes는 sort_order 순 정렬됨
   const subs=workTypes.filter(wt=>wt.category===cat);
   document.getElementById(`sub-${idx}`).innerHTML='<option value="">선택</option>'+subs.map(wt=>`<option value="${wt.sub_category}">${wt.sub_category}</option>`).join('');
 }
