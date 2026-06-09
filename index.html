@@ -793,6 +793,15 @@ async function deletePlan(id){
   toast('삭제됨','ok'); loadDashboard();
 }
 
+async function revertPlan(id){
+  if(!confirm('완료를 취소하고 작업중으로 되돌릴까요?')) return;
+  const{error}=await sbClient.from('work_plans').update({
+    is_completed:false, completed_at:null
+  }).eq('id',id);
+  if(error){ toast('변경 실패: '+error.message,'err'); return; }
+  toast('작업중으로 변경됨 ✓','ok'); loadDashboard();
+}
+
 function buildPlanHtml(sitePlans, actualByCategory){
   let inner = '';
   if(sitePlans.length===0){
@@ -822,7 +831,8 @@ function buildPlanHtml(sitePlans, actualByCategory){
         ? '<div style="margin-top:6px;background:var(--sky-dark);border-radius:4px;height:5px;overflow:hidden"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+(pct<=100?'#29B6F6':'var(--red)')+';transition:width 0.4s"></div></div>' : '';
       const noteHtml = p.note ? '<div style="font-size:12px;color:var(--text-dim);margin-top:2px">'+p.note+'</div>' : '';
       const completeBtn = !p.is_completed
-        ? '<button class="btn bg bsm" onclick="openCompleteModal('+p.id+','+planned+','+actual+')">완료</button>' : '';
+        ? '<button class="btn bg bsm" onclick="openCompleteModal('+p.id+','+planned+','+actual+')">완료</button>'
+        : '<button class="btn bs bsm" onclick="revertPlan('+p.id+')" style="font-size:11px">↩ 작업중</button>';
       rows += '<div class="plan-item '+cls+'" data-plan-id="'+p.id+'" style="cursor:default">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start">'
         + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1">'
@@ -1283,7 +1293,7 @@ function openLogModal(){
   // 시작/종료 시간 변경 시 모든 소분류 행 시간 자동 업데이트
   ['log-start','log-end'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el) el.oninput=()=>updateTimeDisplay();
+    if(el) el.oninput=()=>syncAllSubHours();
   });
   document.getElementById('log-modal').classList.add('open');
 }
@@ -1390,7 +1400,7 @@ async function openEditLog(id){
 
   ['log-start','log-end'].forEach(elid=>{
     const el=document.getElementById(elid);
-    if(el) el.oninput=()=>updateTimeDisplay();
+    if(el) el.oninput=()=>syncAllSubHours();
   });
   document.getElementById('log-modal').classList.add('open');
 }
@@ -1815,7 +1825,7 @@ async function openEditSubLog(id){
   addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday}]});
   ['log-start','log-end'].forEach(elid=>{
     const el=document.getElementById(elid);
-    if(el) el.oninput=()=>updateTimeDisplay();
+    if(el) el.oninput=()=>syncAllSubHours();
   });
   document.getElementById('log-modal').classList.add('open');
 }
