@@ -1793,65 +1793,79 @@ async function openEditSubLog(id){
 }
 
 // 날짜(+대분류 옵션) 사진 다운로드
+// fetch → Blob URL 방식으로 크로스오리진 다운로드
+async function downloadPhotoAsBlob(url, filename){
+  try{
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const blob=await res.blob();
+    const blobUrl=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=blobUrl; a.download=filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(blobUrl),1000);
+    return true;
+  }catch(e){
+    console.error('다운로드 실패:',url,e);
+    return false;
+  }
+}
+
 async function downloadDatePhotos(date, cat){
   toast('사진 불러오는 중...','');
-  // 먼저 해당 날짜의 log id들 가져오기
   let logQ=sbClient.from('daily_logs').select('id,category').eq('work_date',date);
   if(cat) logQ=logQ.eq('category',cat);
   const{data:logRecs,error:logErr}=await logQ;
   if(logErr||!logRecs||!logRecs.length){ toast('해당 날짜 작업이 없습니다','err'); return; }
   const logIds=logRecs.map(l=>l.id);
-  // 그 log id들의 사진 가져오기
   const{data:photos,error:photoErr}=await sbClient.from('photos').select('url,log_id').in('log_id',logIds);
   if(photoErr||!photos||!photos.length){ toast('사진이 없습니다','err'); return; }
-  toast(`${photos.length}장 다운로드 시작...`,'ok');
+  toast(`${photos.length}장 다운로드 중...`,'ok');
+  let ok=0;
   for(let i=0;i<photos.length;i++){
     const p=photos[i];
     const logRec=logRecs.find(l=>l.id===p.log_id);
-    const catName=(logRec?.category||'기타').replace(/[/\\:*?"<>|]/g,'_');
-    const urlParts=p.url.split('.');
-    const ext=urlParts.length>1?urlParts.pop().split('?')[0]:'jpg';
+    const catName=(logRec?.category||'기타').replace(/[\/\\:*?"<>|]/g,'_');
+    const urlParts=p.url.split('?')[0].split('.');
+    const ext=urlParts.length>1?urlParts.pop():'jpg';
     const filename=`${date}_${catName}_${i+1}.${ext}`;
-    await new Promise(res=>{
-      const a=document.createElement('a');
-      a.href=p.url; a.download=filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
-      setTimeout(res,400);
-    });
+    const success=await downloadPhotoAsBlob(p.url, filename);
+    if(success) ok++;
+    await new Promise(res=>setTimeout(res,300));
   }
-  toast(`${photos.length}장 다운로드 완료 ✓`,'ok');
+  toast(`${ok}/${photos.length}장 다운로드 완료 ✓`,'ok');
 }
 
-// 날짜 범위 사진 다운로드 (내보내기 모달용)
 async function exportPhotosRange(){
   const from=document.getElementById('exp-from')?.value;
   const to=document.getElementById('exp-to')?.value;
   document.getElementById('export-modal').classList.remove('open');
   toast('사진 목록 불러오는 중...','');
-  let q=sbClient.from('photos').select('url,log_id,daily_logs(work_date,category,site_name)').order('log_id');
-  const{data:allPhotos,error}=await q;
-  if(error||!allPhotos||!allPhotos.length){ toast('저장된 사진이 없습니다','err'); return; }
-  let photos=allPhotos;
-  if(from) photos=photos.filter(p=>(p.daily_logs?.work_date||'')>=from);
-  if(to)   photos=photos.filter(p=>(p.daily_logs?.work_date||'')<=to);
-  if(!photos.length){ toast('해당 기간 사진이 없습니다','err'); return; }
-  toast(`${photos.length}장 다운로드 시작...`,'ok');
+  // daily_logs 먼저 조회 후 photos join
+  let logQ=sbClient.from('daily_logs').select('id,work_date,category').order('work_date');
+  if(from) logQ=logQ.gte('work_date',from);
+  if(to) logQ=logQ.lte('work_date',to);
+  const{data:logRecs,error:logErr}=await logQ;
+  if(logErr||!logRecs||!logRecs.length){ toast('해당 기간 작업이 없습니다','err'); return; }
+  const logIds=logRecs.map(l=>l.id);
+  const{data:photos,error}=await sbClient.from('photos').select('url,log_id').in('log_id',logIds);
+  if(error||!photos||!photos.length){ toast('해당 기간 사진이 없습니다','err'); return; }
+  toast(`${photos.length}장 다운로드 중...`,'ok');
+  let ok=0;
   for(let i=0;i<photos.length;i++){
     const p=photos[i];
-    const date=p.daily_logs?.work_date||'unknown';
-    const cat=(p.daily_logs?.category||'기타').replace(/[/\\:*?"<>|]/g,'_');
-    const ext=p.url.split('.').pop().split('?')[0]||'jpg';
+    const logRec=logRecs.find(l=>l.id===p.log_id);
+    const date=logRec?.work_date||'unknown';
+    const cat=(logRec?.category||'기타').replace(/[\/\\:*?"<>|]/g,'_');
+    const urlParts=p.url.split('?')[0].split('.');
+    const ext=urlParts.length>1?urlParts.pop():'jpg';
     const filename=`${date}_${cat}_${i+1}.${ext}`;
-    await new Promise(res=>{
-      const a=document.createElement('a');
-      a.href=p.url; a.download=filename; a.target='_blank';
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
-      setTimeout(res,350);
-    });
+    const success=await downloadPhotoAsBlob(p.url, filename);
+    if(success) ok++;
+    await new Promise(res=>setTimeout(res,300));
   }
-  toast(`${photos.length}장 완료 ✓`,'ok');
+  toast(`${ok}/${photos.length}장 다운로드 완료 ✓`,'ok');
 }
 
 // 헤더 사진 버튼 → 내보내기 모달 열기
