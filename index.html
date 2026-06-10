@@ -346,7 +346,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .day-ev-item{background:var(--sky-dark);border-radius:6px;padding:9px 11px;margin-bottom:7px;border-left:3px solid var(--sun)}
 /* ── 이벤트 공사별 그룹 ── */
 .ev-site-group{margin-bottom:14px}
-.ev-site-group-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:var(--radius-sm) var(--radius-sm) 0 0;font-size:13px;font-weight:700;color:var(--sun)}
+.ev-site-group-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.35);border-radius:var(--radius-sm) var(--radius-sm) 0 0;font-size:16px;font-weight:700;color:var(--sun)}
 .ev-site-group-body{border:1px solid rgba(245,166,35,0.15);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:8px}
 .ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:7px}
 .ev-item:last-child{margin-bottom:0}
@@ -1220,7 +1220,7 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
       const sn=dayLogs[0].site_name||'';
       logDot=`<span class="cal-dot work">${sn?sn.slice(0,4)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
     }
-    const evDots=dayEvs.slice(0,2).map(e=>`<span class="cal-dot ev-dot${e.is_completed?' done':''}">${e.title.slice(0,6)}</span>`).join('');
+    const evDots=dayEvs.slice(0,2).map(e=>`<span class="cal-dot ev-dot${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''  }${e.title}">${e.site_name?'['+e.site_name.slice(0,3)+'] ':''  }${e.title.slice(0,5)}</span>`).join('');
     const hasWork=dayLogs.length?'has-work':'';
     cells+=`<div class="cal-day${isToday?' today':''} ${hasWork}" onclick="openDayPopup('${ds}')">`
       +`<div class="cal-day-num">${d}</div>${bars}${logDot}${evDots}</div>`;
@@ -1277,7 +1277,7 @@ function openDayPopup(ds){
     evs.forEach(e=>{
       html+=`<div class="day-ev-item">`
         +`<div style="font-size:13px;font-weight:700;color:var(--text)">${e.title}</div>`
-        +(e.detail?`<div style="font-size:12px;color:var(--text-dim);margin-top:3px">${e.detail}</div>`:'')
+        +(e.detail?`<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px"><span class="qty-badge" style="background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.25);color:var(--sun);font-size:12px;padding:4px 10px">📝 ${e.detail}</span></div>`:'')
         +(e.site_name?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">🏗 ${e.site_name}</div>`:'')
         +`<div style="font-size:11px;margin-top:5px"><span style="background:${e.is_completed?'rgba(255,255,255,0.07)':'rgba(245,166,35,0.12)'};color:${e.is_completed?'var(--text-dim)':'var(--sun)'};border-radius:8px;padding:2px 9px">${e.is_completed?'✓ 완료':'예정'}</span></div>`
         +`</div>`;
@@ -1318,7 +1318,7 @@ function buildEventHtmlGrouped(allEvents, today, allSites){
       +`<span class="ev-drag" style="cursor:grab;color:var(--text-dim);user-select:none;padding-top:2px;flex-shrink:0;touch-action:none">☰</span>`
       +`<div style="flex:1;min-width:0">`
       +`<div class="ev-title">${ev.title}</div>`
-      +(ev.detail?`<div class="ev-meta">${ev.detail}</div>`:'')
+      +(ev.detail?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:4px"><span class="qty-badge" style="background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.25);color:var(--sun)">📝 ${ev.detail}</span></div>`:'')
       +`<span class="ev-badge ${badgeCls}">${ev.is_completed?'✓ '+(ev.completed_at||''):'📅 '+(ev.event_date||'')+' '+label}</span>`
       +`</div></div>`
       +`<div style="display:flex;gap:4px;margin-left:6px;flex-shrink:0">`
@@ -1816,20 +1816,22 @@ function addMatRow(sid, data){
   matRowCount++;
   const mid=sid+'_m'+matRowCount;
   const div=document.createElement('div');
-  div.id='mr-'+mid;
-  div.style.cssText='display:flex;gap:5px;margin-bottom:7px;align-items:center';
+  div.style.cssText='background:var(--sky-dark);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:7px';
   const name=(data&&data.name)||'';
   const qty=(data&&data.qty!=null)?data.qty:'';
   const unit=(data&&data.unit)||'';
+  const unitOpts=UNITS.map(u=>'<option value="'+u+'"'+(u===unit?' selected':'')+'>'+u+'</option>').join('');
   div.innerHTML=
-    '<input type="text" class="fi" id="mrn-'+mid+'" placeholder="부재명" style="flex:2;min-width:0" value="'+name+'">'
-    +'<input type="number" class="fi" id="mrv-'+mid+'" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="'+qty+'">'
-    +'<div style="position:relative;flex-shrink:0">'
-      +'<input type="text" class="fi" id="mru-'+mid+'" placeholder="단위▼" style="width:70px;cursor:pointer;text-align:center;caret-color:transparent" readonly'
-        +' value="'+unit+'" onclick="toggleUnitPicker(\'mru-'+mid+'\')">'
-      +'<div id="up-mru-'+mid+'" class="unit-picker" style="display:none"></div>'
+    '<div style="display:flex;gap:5px;margin-bottom:6px;align-items:center">'
+      +'<input type="text" class="fi" id="mrn-'+mid+'" placeholder="부재명" style="flex:1;min-width:0" value="'+name+'">'
+      +'<button type="button" class="btn bd bsm" onclick="document.getElementById(\'mr-'+mid+'\').remove()" style="padding:5px 9px;flex-shrink:0">✕</button>'
     +'</div>'
-    +'<button type="button" class="btn bd bsm" onclick="document.getElementById(&apos;mr-&apos;+mid+&apos;&apos;).remove()" style="padding:6px 10px;flex-shrink:0">✕</button>';
+    +'<div style="display:flex;gap:5px;align-items:center">'
+      +'<input type="number" class="fi" id="mrv-'+mid+'" step="0.01" placeholder="수량" style="flex:1;min-width:0" value="'+qty+'">'
+      +'<select class="fs" id="mru-'+mid+'" style="width:72px">'
+        +'<option value="">단위</option>'+unitOpts
+      +'</select>'
+    +'</div>';
   const container=document.getElementById('mat-rows-'+sid);
   if(container) container.appendChild(div);
 }
