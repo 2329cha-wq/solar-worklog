@@ -697,6 +697,14 @@ function showConfigWarning(){
 async function loadAll(){
   if(!sbClient) return;
   // 현장 복원
+  const sid=localStorage.getItem('sel_site_id');
+  const sname=localStorage.getItem('sel_site_name');
+  if(sid&&sname){ currentSiteId=parseInt(sid); updateHeaderSite(sname); }
+  await Promise.all([loadWorkTypes(), loadSites()]);
+  await initDateFilters();
+  loadDashboard(); loadLogs(); loadSummary();
+}
+
 async function loadDashboard(){
   if(!sbClient) return;
   const el=document.getElementById('dash-content');
@@ -784,11 +792,6 @@ async function loadDashboard(){
       }
     });
   }
-}
-  if(sid&&sname){ currentSiteId=parseInt(sid); updateHeaderSite(sname); }
-  await Promise.all([loadWorkTypes(), loadSites()]);
-  await initDateFilters();
-  loadDashboard(); loadLogs(); loadSummary();
 }
 
 async function initDateFilters(){
