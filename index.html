@@ -324,11 +324,11 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 
 <!-- 탭 -->
 <div class="tab-nav">
+  <button class="tab-btn" onclick="switchTab('calendar')" id="tab-calendar"><span class="ti">📅</span>달력</button>
   <button class="tab-btn active" onclick="switchTab('dashboard')" id="tab-dashboard"><span class="ti">📊</span>대시보드</button>
   <button class="tab-btn" onclick="switchTab('logs')" id="tab-logs"><span class="ti">📋</span>작업일지</button>
   <button class="tab-btn" onclick="switchTab('summary')" id="tab-summary"><span class="ti">📈</span>M/D집계</button>
   <button class="tab-btn" onclick="switchTab('workdb')" id="tab-workdb"><span class="ti">🗂️</span>공종DB</button>
-  <button class="tab-btn" onclick="switchTab('calendar')" id="tab-calendar"><span class="ti">📅</span>달력</button>
   <button class="tab-btn" onclick="switchTab('settings')" id="tab-settings"><span class="ti">⚙️</span>설정</button>
 </div>
 
@@ -697,26 +697,18 @@ function showConfigWarning(){
 async function loadAll(){
   if(!sbClient) return;
   // 현장 복원
-  const sid=localStorage.getItem('sel_site_id');
-  const sname=localStorage.getItem('sel_site_name');
-  if(sid&&sname){ currentSiteId=parseInt(sid); updateHeaderSite(sname); }
-  await Promise.all([loadWorkTypes(), loadSites()]);
-  await initDateFilters();
-  loadDashboard(); loadLogs(); loadSummary();
-}
-
 async function loadDashboard(){
   if(!sbClient) return;
   const el=document.getElementById('dash-content');
   const[{data:logs,error:e1},{data:plans,error:e2},{data:evs}]=await Promise.all([
     sbClient.from('daily_logs').select('*'),
     sbClient.from('work_plans').select('*').order('sort_order',{ascending:true}),
-    sbClient.from('events').select('*').order('sort_order',{ascending:true}).catch(()=>({data:[]}))
+    sbClient.from('events').select('*').order('sort_order',{ascending:true})
   ]);
   if(e1){el.innerHTML=`<div class="config-warn">⚠️ DB 오류: ${e1.message}</div>`;return;}
   if(e2) console.warn('work_plans:', e2?.message);
 
-  const allLogs=logs||[], allPlans=e2?[]:(plans||[]), allEvents=evs?.data||evs||[];
+  const allLogs=logs||[], allPlans=e2?[]:(plans||[]), allEvents=evs||[];
   window._cachedEvents=allEvents;
   cachePlans(allPlans);
 
@@ -792,6 +784,11 @@ async function loadDashboard(){
       }
     });
   }
+}
+  if(sid&&sname){ currentSiteId=parseInt(sid); updateHeaderSite(sname); }
+  await Promise.all([loadWorkTypes(), loadSites()]);
+  await initDateFilters();
+  loadDashboard(); loadLogs(); loadSummary();
 }
 
 async function initDateFilters(){
@@ -1069,11 +1066,13 @@ async function loadCalendarTab(){
   if(!sbClient) return;
   const el=document.getElementById('cal-content');
   el.innerHTML='<div class="loading"><div class="spinner"></div>로딩 중...</div>';
-  const[{data:logs},{data:evs}]=await Promise.all([
-    sbClient.from('daily_logs').select('work_date,site_name,category,manday'),
-    sbClient.from('events').select('*').order('sort_order',{ascending:true}).catch(()=>({data:[]}))
-  ]);
-  const allLogs=logs||[], allEvents=evs?.data||evs||[];
+  const{data:logs}=await sbClient.from('daily_logs').select('work_date,site_name,category,manday');
+  let allEvents=[];
+  try{
+    const{data:evs}=await sbClient.from('events').select('*').order('sort_order',{ascending:true});
+    allEvents=evs||[];
+  }catch(e){ console.warn('events 테이블 없음'); }
+  const allLogs=logs||[];
   window._cachedEvents=allEvents;
 
   const calHtml=buildCalendarHtml(allLogs, allEvents, sites);
@@ -1715,7 +1714,7 @@ function addMatRow(sid, data){
     +'<input type="number" class="fi" id="mrv-'+mid+'" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="'+qty+'">'
     +'<div style="position:relative;flex-shrink:0">'
       +'<input type="text" class="fi" id="mru-'+mid+'" placeholder="단위▼" style="width:70px;cursor:pointer;text-align:center;caret-color:transparent" readonly'
-        +' value="'+unit+'" onclick="toggleUnitPicker(&apos;mru-&apos;+mid+&apos;&apos;)">'
+        +' value="'+unit+'" onclick="toggleUnitPicker(\'mru-'+mid+'\')">'
       +'<div id="up-mru-'+mid+'" class="unit-picker" style="display:none"></div>'
     +'</div>'
     +'<button type="button" class="btn bd bsm" onclick="document.getElementById(&apos;mr-&apos;+mid+&apos;&apos;).remove()" style="padding:6px 10px;flex-shrink:0">✕</button>';
