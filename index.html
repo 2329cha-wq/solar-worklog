@@ -877,7 +877,7 @@ async function loadDashboard(){
   const planHtml=buildPlanHtml(sitePlans,actualByCategory);
   const today=new Date(); today.setHours(0,0,0,0);
   const calHtml=buildCalendarHtml(allLogs,allEvents,sites);
-  const evHtml=buildEventHtml(siteEvents,today);
+  const evHtml=buildEventHtmlGrouped(siteEvents,today,sites);
 
   // 레이아웃: 왼쪽(통계+계획) | 오른쪽(달력+이벤트)
   el.innerHTML=siteCard+`
