@@ -955,10 +955,14 @@ async function loadLogs(){
           <div class="log-sub-info">
             <div class="log-sub-name">${l.sub_category}</div>
             ${l.detail?`<div class="log-sub-detail">💬 ${l.detail}</div>`:''}
-            ${(l.qty1_val||l.qty2_val||l.mat1_name||l.mat2_name)?`<div style="margin-bottom:5px">
-              ${(l.mat1_name||l.qty1_val)?`<span class="qty-badge">📦 ${l.mat1_name?l.mat1_name+' ':''}${l.qty1_val||''}${l.qty1_unit||''}</span>`:''}
-              ${(l.mat2_name||l.qty2_val)?`<span class="qty-badge">📦 ${l.mat2_name?l.mat2_name+' ':''}${l.qty2_val||''}${l.qty2_unit||''}</span>`:''}
-            </div>`:''}
+            ${(()=>{
+              let mats=[];
+              if(l.materials){try{mats=JSON.parse(l.materials);}catch(e){}}
+              if(!mats.length&&(l.mat1_name||l.qty1_val)) mats.push({name:l.mat1_name||'',qty:l.qty1_val,unit:l.qty1_unit||''});
+              if(l.mat2_name||l.qty2_val) mats.push({name:l.mat2_name||'',qty:l.qty2_val,unit:l.qty2_unit||''});
+              if(!mats.length) return '';
+              return '<div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px">'+mats.map(m=>'<span class="qty-badge">📦 '+(m.name?m.name+' ':'')+( m.qty||'')+(m.unit||'')+'</span>').join('')+'</div>';
+            })()}
             <div class="log-sub-stats">
               <span class="stat-pill workers">👷 ${workers}명</span>
               ${hours>0?`<span class="stat-pill hours">⏱ ${hours}h</span>`:''}
@@ -1152,29 +1156,14 @@ function addSubRow(cid, data={}){
     <div class="fg" style="margin-bottom:8px">
       <textarea class="ft" id="srd-${sid}" style="min-height:48px" placeholder="세부 작업내용">${(data&&data.detail)||''}</textarea>
     </div>
-    <!-- 부재명 + 수량 입력 (선택) -->
+    <!-- 부재명 + 수량 (동적 추가/삭제) -->
     <div style="margin-bottom:10px">
-      <label class="fl">부재명 · 수량 (선택)</label>
-      <!-- 부재1 -->
-      <div style="display:flex;gap:5px;margin-bottom:6px;align-items:center">
-        <input type="text" class="fi" id="srmat1-${sid}" placeholder="부재명 (예: 각관, 패널)" style="flex:2;min-width:0" value="${(data&&data.mat1_name)||''}">
-        <input type="number" class="fi" id="srq1v-${sid}" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="${(data&&data.qty1_val)||''}">
-        <div style="position:relative;flex-shrink:0">
-          <input type="text" class="fi" id="srq1u-${sid}" placeholder="단위" style="width:65px;cursor:pointer;text-align:center" readonly
-            value="${(data&&data.qty1_unit)||''}" onclick="toggleUnitPicker('srq1u-${sid}')">
-          <div id="up-srq1u-${sid}" class="unit-picker" style="display:none"></div>
-        </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label class="fl" style="margin:0">📦 부재명 · 수량 (선택)</label>
+        <button type="button" class="btn bs bsm" onclick="addMatRow(${sid})" style="font-size:13px;padding:7px 13px">＋ 부재 추가</button>
       </div>
-      <!-- 부재2 -->
-      <div style="display:flex;gap:5px;align-items:center">
-        <input type="text" class="fi" id="srmat2-${sid}" placeholder="부재명 (예: 볼트, 브라켓)" style="flex:2;min-width:0" value="${(data&&data.mat2_name)||''}">
-        <input type="number" class="fi" id="srq2v-${sid}" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="${(data&&data.qty2_val)||''}">
-        <div style="position:relative;flex-shrink:0">
-          <input type="text" class="fi" id="srq2u-${sid}" placeholder="단위" style="width:65px;cursor:pointer;text-align:center" readonly
-            value="${(data&&data.qty2_unit)||''}" onclick="toggleUnitPicker('srq2u-${sid}')">
-          <div id="up-srq2u-${sid}" class="unit-picker" style="display:none"></div>
-        </div>
-      </div>
+      <div id="mat-rows-${sid}"></div>
+    </div>
     </div>
     <div class="fr3">
       <div class="fg"><label class="fl">투입인원</label>
@@ -1188,6 +1177,17 @@ function addSubRow(cid, data={}){
       </div>
     </div>`;
   document.getElementById(`cb-subs-${cid}`).appendChild(div);
+  // 기존 부재 복원
+  if(data){
+    if(data.materials){
+      var mats=[];
+      try{ mats=typeof data.materials==='string'?JSON.parse(data.materials):data.materials; }catch(e){}
+      mats.forEach(function(m){ setTimeout(function(){ addMatRow(sid,m); },50); });
+    } else if(data.mat1_name||data.qty1_val){
+      setTimeout(function(){ addMatRow(sid,{name:data.mat1_name||'',qty:data.qty1_val||'',unit:data.qty1_unit||''}); },50);
+      if(data.mat2_name||data.qty2_val) setTimeout(function(){ addMatRow(sid,{name:data.mat2_name||'',qty:data.qty2_val||'',unit:data.qty2_unit||''}); },100);
+    }
+  }
 }
 
 function removeSubRow(sid,cid){
@@ -1195,7 +1195,45 @@ function removeSubRow(sid,cid){
   updateCbTotal(cid);
 }
 
-const UNITS=['EA','SET','평','M','M²','M³','TON','KG','BOX','식'];
+const UNITS=['EA','SET','평','M','KG','BOX','식'];
+let matRowCount=0;
+
+function addMatRow(sid, data){
+  matRowCount++;
+  const mid=sid+'_m'+matRowCount;
+  const div=document.createElement('div');
+  div.id='mr-'+mid;
+  div.style.cssText='display:flex;gap:5px;margin-bottom:7px;align-items:center';
+  const name=(data&&data.name)||'';
+  const qty=(data&&data.qty!=null)?data.qty:'';
+  const unit=(data&&data.unit)||'';
+  div.innerHTML=
+    '<input type="text" class="fi" id="mrn-'+mid+'" placeholder="부재명" style="flex:2;min-width:0" value="'+name+'">'
+    +'<input type="number" class="fi" id="mrv-'+mid+'" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="'+qty+'">'
+    +'<div style="position:relative;flex-shrink:0">'
+      +'<input type="text" class="fi" id="mru-'+mid+'" placeholder="단위▼" style="width:70px;cursor:pointer;text-align:center;caret-color:transparent" readonly'
+        +' value="'+unit+'" onclick="toggleUnitPicker('mru-'+mid+'')">'
+      +'<div id="up-mru-'+mid+'" class="unit-picker" style="display:none"></div>'
+    +'</div>'
+    +'<button type="button" class="btn bd bsm" onclick="document.getElementById('mr-'+mid+'').remove()" style="padding:6px 10px;flex-shrink:0">✕</button>';
+  const container=document.getElementById('mat-rows-'+sid);
+  if(container) container.appendChild(div);
+}
+
+function getMatRows(sid){
+  const container=document.getElementById('mat-rows-'+sid);
+  if(!container) return [];
+  const result=[];
+  container.querySelectorAll('[id^="mr-"]').forEach(function(row){
+    const mid=row.id.replace('mr-','');
+    const name=((document.getElementById('mrn-'+mid)||{}).value||'').trim();
+    const qty=(document.getElementById('mrv-'+mid)||{}).value||'';
+    const unit=(document.getElementById('mru-'+mid)||{}).value||'';
+    if(name||qty) result.push({name:name,qty:qty?parseFloat(qty):null,unit:unit});
+  });
+  return result;
+}
+
 
 function toggleUnitPicker(inputId){
   // 다른 피커 전부 닫기
@@ -1219,7 +1257,7 @@ function selectUnit(inputId, unit){
 
 // 바깥 클릭 시 피커 닫기
 document.addEventListener('click', e=>{
-  if(!e.target.closest('[id^="srq"]')&&!e.target.closest('.unit-picker')){
+  if(!e.target.closest('[id^="srq"]')&&!e.target.closest('[id^="mru"]')&&!e.target.closest('.unit-picker')){
     document.querySelectorAll('.unit-picker').forEach(p=>p.style.display='none');
   }
 });
@@ -1439,7 +1477,9 @@ async function openEditLog(id){
     const subs=recs.map(l=>{
       const _w=parseFloat(l.workers)||0, _md=parseFloat(l.manday)||0;
       const _h=_w>0?Math.round(_md*8/_w*100)/100:8;
-      return {sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday,_id:l.id};
+      return {sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday,_id:l.id,
+        materials:l.materials||null,mat1_name:l.mat1_name||'',qty1_val:l.qty1_val||'',qty1_unit:l.qty1_unit||'',
+        mat2_name:l.mat2_name||'',qty2_val:l.qty2_val||'',qty2_unit:l.qty2_unit||''};
     });
     addCatBlock({category:cat, subs});
   });
@@ -1506,17 +1546,11 @@ async function saveLog(){
       if(!sub){ toast(`${cat}: 소분류를 선택하세요`,'err'); return; }
       if(!md){ toast(`${cat} > ${sub}: 인원/시간을 입력하세요`,'err'); return; }
       const pIdx=payloads.length;
-      const qty1v=document.getElementById(`srq1v-${sid}`)?.value||null;
-      const qty1u=document.getElementById(`srq1u-${sid}`)?.value||null;
-      const qty2v=document.getElementById(`srq2v-${sid}`)?.value||null;
-      const qty2u=document.getElementById(`srq2u-${sid}`)?.value||null;
-      const mat1=document.getElementById(`srmat1-${sid}`)?.value||null;
-      const mat2=document.getElementById(`srmat2-${sid}`)?.value||null;
+      const mats=getMatRows(sid);
       payloads.push({work_date:date,category:cat,sub_category:sub,
         detail:document.getElementById(`srd-${sid}`)?.value||'',
         manday:md, workers:parseInt(document.getElementById(`srw-${sid}`)?.value)||null,
-        mat1_name:mat1||null, qty1_val:qty1v?parseFloat(qty1v):null, qty1_unit:qty1u||null,
-        mat2_name:mat2||null, qty2_val:qty2v?parseFloat(qty2v):null, qty2_unit:qty2u||null,
+        materials:mats.length?JSON.stringify(mats):null,
         start_time:startTime,end_time:endTime,weather,manager,memo,site_name:siteName});
       if(sr===subRows[0]) photoMap.push({pIdx,cid});
     }
@@ -1846,144 +1880,72 @@ async function exportExcel(){
   const from=document.getElementById('exp-from')?.value;
   const to=document.getElementById('exp-to')?.value;
   toast('엑셀 생성 중...','');
-
   let q=sbClient.from('daily_logs').select('*').order('work_date').order('category');
   if(from) q=q.gte('work_date',from);
   if(to) q=q.lte('work_date',to);
   const{data:logs,error}=await q;
   if(error||!logs||!logs.length){ toast('데이터가 없습니다','err'); return; }
-
-  // 현장 정보
   const siteName=sites.find(s=>s.id===currentSiteId)?.name||'';
   const siteInfo=sites.find(s=>s.id===currentSiteId)||{};
-
   const wb=XLSX.utils.book_new();
 
-  // ══════════════════════════
   // 시트1: 일별 작업일지
-  // ══════════════════════════
   const ws1Data=[];
-  // 표지
   ws1Data.push(['태양광 설치공사 작업일지']);
-  ws1Data.push(['공사명', siteName, '', '발주처', siteInfo.client||'']);
-  ws1Data.push(['시공사', siteInfo.contractor||'', '', '공사기간', (siteInfo.start_date||'')+'~'+(siteInfo.end_date||'')]);
+  ws1Data.push(['공사명',siteName,'','발주처',siteInfo.client||'']);
+  ws1Data.push(['시공사',siteInfo.contractor||'','','공사기간',(siteInfo.start_date||'')+'~'+(siteInfo.end_date||'')]);
   ws1Data.push([]);
-  // 헤더
   ws1Data.push(['날짜','대분류','소분류','세부작업내용','부재명/수량','투입인원(명)','작업시간(h)','M/D','시작','종료','날씨','확인자','특이사항']);
-
-  // 날짜별 그룹
   const dateGroups={};
-  logs.forEach(l=>{
-    if(!dateGroups[l.work_date]) dateGroups[l.work_date]=[];
-    dateGroups[l.work_date].push(l);
-  });
-
-  let rowIdx=5; // 헤더 다음 행 (0-based: 4)
-  const dateRowMap={}; // 날짜별 시작행 기록
-
-  Object.entries(dateGroups).forEach(([date,items])=>{
-    dateRowMap[date]=rowIdx;
-    items.forEach((l,i)=>{
-      const w=parseFloat(l.workers)||0;
-      const md=parseFloat(l.manday)||0;
+  logs.forEach(l=>{ if(!dateGroups[l.work_date]) dateGroups[l.work_date]=[]; dateGroups[l.work_date].push(l); });
+  Object.entries(dateGroups).forEach(function([date,items]){
+    items.forEach(function(l,i){
+      const w=parseFloat(l.workers)||0, md=parseFloat(l.manday)||0;
       const h=w>0?Math.round(md*8/w*100)/100:0;
-      // materials 파싱
       let matStr='';
       if(l.materials){try{const m=JSON.parse(l.materials);matStr=m.map(x=>(x.name||'')+(x.qty?' '+x.qty:'')+(x.unit||'')).join(', ');}catch(e){}}
       else if(l.mat1_name||l.qty1_val) matStr=(l.mat1_name||'')+(l.qty1_val?' '+l.qty1_val:'')+(l.qty1_unit||'');
-      ws1Data.push([
-        i===0?date:'',
-        l.category,
-        l.sub_category,
-        l.detail||'',
-        matStr,
-        l.workers||'',
-        h||'',
-        parseFloat(l.manday)||'',
-        l.start_time||'',
-        l.end_time||'',
-        l.weather||'',
-        l.manager||'',
-        i===0?(l.memo||''):''
-      ]);
-      rowIdx++;
+      ws1Data.push([i===0?date:'',l.category,l.sub_category,l.detail||'',matStr,l.workers||'',h||'',parseFloat(l.manday)||'',l.start_time||'',l.end_time||'',l.weather||'',l.manager||'',i===0?(l.memo||''):'']);
     });
-    // 날짜 소계행
     const dateMd=items.reduce((s,l)=>s+parseFloat(l.manday||0),0);
     ws1Data.push(['','','','','','소계','',dateMd.toFixed(2),'','','','','']);
-    rowIdx++;
-    ws1Data.push([]); rowIdx++;
+    ws1Data.push([]);
   });
-
-  // 총합계
   const totalMd=logs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
   ws1Data.push(['','','','','','총 합계 M/D','',totalMd.toFixed(2),'','','','','']);
-
   const ws1=XLSX.utils.aoa_to_sheet(ws1Data);
+  ws1['!cols']=[{wch:12},{wch:16},{wch:20},{wch:28},{wch:22},{wch:10},{wch:10},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:24}];
+  ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:12}},{s:{r:1,c:1},e:{r:1,c:2}},{s:{r:2,c:1},e:{r:2,c:2}}];
+  XLSX.utils.book_append_sheet(wb,ws1,'일별작업일지');
 
-  // 열 너비 설정
-  ws1['!cols']=[
-    {wch:12},{wch:16},{wch:20},{wch:28},{wch:22},
-    {wch:10},{wch:10},{wch:8},{wch:8},{wch:8},
-    {wch:8},{wch:10},{wch:24}
-  ];
-
-  // 셀 병합: 제목행
-  ws1['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:12}}, // 제목
-    {s:{r:1,c:1},e:{r:1,c:2}},  // 공사명 값
-    {s:{r:2,c:1},e:{r:2,c:2}},  // 시공사 값
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws1, '일별작업일지');
-
-  // ══════════════════════════
   // 시트2: M/D 집계
-  // ══════════════════════════
   const ws2Data=[];
   ws2Data.push(['공종별 M/D 집계표']);
-  ws2Data.push(['공사명', siteName]);
+  ws2Data.push(['공사명',siteName]);
   ws2Data.push([]);
   ws2Data.push(['대분류','소분류','작업일수','투입인원(최대)','총 M/D','비고']);
-
-  // 공종별 집계
   const catMap={};
-  logs.forEach(l=>{
+  logs.forEach(function(l){
     const k=l.category+'||'+l.sub_category;
     if(!catMap[k]) catMap[k]={cat:l.category,sub:l.sub_category,dates:new Set(),workers:0,md:0};
     catMap[k].dates.add(l.work_date);
     catMap[k].workers=Math.max(catMap[k].workers,parseFloat(l.workers||0));
     catMap[k].md+=parseFloat(l.manday||0);
   });
-
-  let prevCat='';
-  let grandMd=0;
-  Object.values(catMap).forEach(v=>{
-    ws2Data.push([
-      v.cat===prevCat?'':v.cat,
-      v.sub,
-      v.dates.size,
-      v.workers,
-      parseFloat(v.md.toFixed(2)),
-      ''
-    ]);
-    prevCat=v.cat;
-    grandMd+=v.md;
+  let prevCat='',grandMd=0;
+  Object.values(catMap).forEach(function(v){
+    ws2Data.push([v.cat===prevCat?'':v.cat,v.sub,v.dates.size,v.workers,parseFloat(v.md.toFixed(2)),'']);
+    prevCat=v.cat; grandMd+=v.md;
   });
   ws2Data.push([]);
   ws2Data.push(['합계','','','',parseFloat(grandMd.toFixed(2)),'']);
-
   const ws2=XLSX.utils.aoa_to_sheet(ws2Data);
   ws2['!cols']=[{wch:18},{wch:22},{wch:10},{wch:14},{wch:10},{wch:20}];
   ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
+  XLSX.utils.book_append_sheet(wb,ws2,'MD집계');
 
-  XLSX.utils.book_append_sheet(wb, ws2, 'MD집계');
-
-  // ══════════════════════════
-  // 저장
-  // ══════════════════════════
   const fname='태양광작업일지_'+(siteName||'현장')+'_'+new Date().toISOString().split('T')[0]+'.xlsx';
-  XLSX.writeFile(wb, fname);
+  XLSX.writeFile(wb,fname);
   toast('엑셀 저장 완료 ✓','ok');
 }
 
@@ -2039,7 +2001,9 @@ async function openEditSubLog(id){
   if(siteId) sel.value=siteId; else if(currentSiteId) sel.value=currentSiteId;
   const _w=parseFloat(l.workers)||0, _md=parseFloat(l.manday)||0;
   const _h=_w>0?Math.round(_md*8/_w*100)/100:8;
-  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday,mat1_name:l.mat1_name||'',qty1_val:l.qty1_val||'',qty1_unit:l.qty1_unit||'',mat2_name:l.mat2_name||'',qty2_val:l.qty2_val||'',qty2_unit:l.qty2_unit||''}]});
+  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday,
+    materials:l.materials||null,mat1_name:l.mat1_name||'',qty1_val:l.qty1_val||'',qty1_unit:l.qty1_unit||'',
+    mat2_name:l.mat2_name||'',qty2_val:l.qty2_val||'',qty2_unit:l.qty2_unit||''}]});
   ['log-start','log-end'].forEach(elid=>{
     const el=document.getElementById(elid);
     if(el) el.oninput=()=>syncAllSubHours();
