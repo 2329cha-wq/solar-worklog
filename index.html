@@ -953,10 +953,14 @@ async function loadLogs(){
           <div class="log-sub-info">
             <div class="log-sub-name">${l.sub_category}</div>
             ${l.detail?`<div class="log-sub-detail">💬 ${l.detail}</div>`:''}
-            ${(l.qty1_val||l.qty2_val||l.mat1_name||l.mat2_name)?`<div style="margin-bottom:5px">
-              ${(l.mat1_name||l.qty1_val)?`<span class="qty-badge">📦 ${l.mat1_name?l.mat1_name+' ':''}${l.qty1_val||''}${l.qty1_unit||''}</span>`:''}
-              ${(l.mat2_name||l.qty2_val)?`<span class="qty-badge">📦 ${l.mat2_name?l.mat2_name+' ':''}${l.qty2_val||''}${l.qty2_unit||''}</span>`:''}
-            </div>`:''}
+            ${(()=>{
+              let mats=[];
+              if(l.materials){try{mats=JSON.parse(l.materials);}catch(e){}}
+              // 구버전 호환
+              if(!mats.length&&(l.mat1_name||l.qty1_val)) mats.push({name:l.mat1_name||'',qty:l.qty1_val,unit:l.qty1_unit||''});
+              if(!mats.length&&(l.mat2_name||l.qty2_val)) mats.push({name:l.mat2_name||'',qty:l.qty2_val,unit:l.qty2_unit||''});
+              return mats.length?`<div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px">${mats.map(m=>`<span class="qty-badge">📦 ${m.name?m.name+' ':''}${m.qty||''}${m.unit||''}</span>`).join('')}</div>`:'';
+            })()}
             <div class="log-sub-stats">
               <span class="stat-pill workers">👷 ${workers}명</span>
               ${hours>0?`<span class="stat-pill hours">⏱ ${hours}h</span>`:''}
@@ -1092,7 +1096,7 @@ function addCatBlock(catData={}){
       <button class="btn bd bsm" onclick="removeCatBlock(${cid})" style="padding:5px 8px">✕</button>
     </div>
     <div id="cb-subs-${cid}" style="margin-bottom:8px"></div>
-    <button class="btn bs bsm bfull" onclick="addSubRow(${cid})" style="margin-bottom:10px">＋ 소분류 추가</button>
+    <button class="btn bs bfull" onclick="addSubRow(${cid})" style="margin-bottom:10px;font-size:14px;padding:11px">＋ 소분류 추가</button>
     <div class="fg" style="margin-bottom:0">
       <label class="fl">📷 현장 사진 (이 대분류)</label>
       <div class="photo-zone" onclick="document.getElementById('cbph-${cid}').click()">사진 추가</div>
@@ -1102,7 +1106,7 @@ function addCatBlock(catData={}){
   document.getElementById('work-rows').appendChild(div);
   // subs 배열이 있으면 전부 추가, 없으면 빈 행 하나
   if(catData.subs && catData.subs.length){
-    catData.subs.forEach(sub=>addSubRow(cid, sub));
+    catData.subs.forEach(function(sub){ addSubRow(cid, sub); });
   } else {
     addSubRow(cid);
   }
@@ -1150,29 +1154,13 @@ function addSubRow(cid, data={}){
     <div class="fg" style="margin-bottom:8px">
       <textarea class="ft" id="srd-${sid}" style="min-height:48px" placeholder="세부 작업내용">${(data&&data.detail)||''}</textarea>
     </div>
-    <!-- 부재명 + 수량 입력 (선택) -->
+    <!-- 부재명 + 수량 (동적 추가/삭제) -->
     <div style="margin-bottom:10px">
-      <label class="fl">부재명 · 수량 (선택)</label>
-      <!-- 부재1 -->
-      <div style="display:flex;gap:5px;margin-bottom:6px;align-items:center">
-        <input type="text" class="fi" id="srmat1-${sid}" placeholder="부재명 (예: 각관, 패널)" style="flex:2;min-width:0" value="${(data&&data.mat1_name)||''}">
-        <input type="number" class="fi" id="srq1v-${sid}" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="${(data&&data.qty1_val)||''}">
-        <div style="position:relative;flex-shrink:0">
-          <input type="text" class="fi" id="srq1u-${sid}" placeholder="단위" style="width:65px;cursor:pointer;text-align:center" readonly
-            value="${(data&&data.qty1_unit)||''}" onclick="toggleUnitPicker('srq1u-${sid}')">
-          <div id="up-srq1u-${sid}" class="unit-picker" style="display:none"></div>
-        </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label class="fl" style="margin:0">📦 부재명 · 수량 (선택)</label>
+        <button type="button" class="btn bs bsm" onclick="addMatRow(${sid})" style="font-size:13px;padding:7px 13px">＋ 부재 추가</button>
       </div>
-      <!-- 부재2 -->
-      <div style="display:flex;gap:5px;align-items:center">
-        <input type="text" class="fi" id="srmat2-${sid}" placeholder="부재명 (예: 볼트, 브라켓)" style="flex:2;min-width:0" value="${(data&&data.mat2_name)||''}">
-        <input type="number" class="fi" id="srq2v-${sid}" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="${(data&&data.qty2_val)||''}">
-        <div style="position:relative;flex-shrink:0">
-          <input type="text" class="fi" id="srq2u-${sid}" placeholder="단위" style="width:65px;cursor:pointer;text-align:center" readonly
-            value="${(data&&data.qty2_unit)||''}" onclick="toggleUnitPicker('srq2u-${sid}')">
-          <div id="up-srq2u-${sid}" class="unit-picker" style="display:none"></div>
-        </div>
-      </div>
+      <div id="mat-rows-${sid}"></div>
     </div>
     <div class="fr3">
       <div class="fg"><label class="fl">투입인원</label>
@@ -1186,6 +1174,15 @@ function addSubRow(cid, data={}){
       </div>
     </div>`;
   document.getElementById(`cb-subs-${cid}`).appendChild(div);
+  // 기존 materials 복원
+  if(data&&data.materials){
+    let mats=[];
+    try{ mats=typeof data.materials==='string'?JSON.parse(data.materials):data.materials; }catch(e){}
+    mats.forEach(function(m){ setTimeout(function(){ addMatRow(sid,{name:m.name,qty:m.qty,unit:m.unit}); },30); });
+  } else if(data&&(data.mat1_name||data.qty1_val)){
+    setTimeout(function(){ addMatRow(sid,{name:data.mat1_name||'',qty:data.qty1_val||'',unit:data.qty1_unit||''}); },30);
+    if(data.mat2_name||data.qty2_val) setTimeout(function(){ addMatRow(sid,{name:data.mat2_name||'',qty:data.qty2_val||'',unit:data.qty2_unit||''}); },60);
+  }
 }
 
 function removeSubRow(sid,cid){
@@ -1193,7 +1190,43 @@ function removeSubRow(sid,cid){
   updateCbTotal(cid);
 }
 
-const UNITS=['EA','SET','평','M','M²','M³','TON','KG','BOX','식'];
+const UNITS=['EA','SET','평','M','KG','BOX','식'];
+let matRowCount=0;
+
+function addMatRow(sid, data={}){
+  matRowCount++;
+  const mid=sid+'_'+matRowCount;
+  const div=document.createElement('div');
+  div.id='mr-'+mid;
+  div.style.cssText='display:flex;gap:5px;margin-bottom:7px;align-items:center';
+  div.innerHTML=
+    '<input type="text" class="fi" id="mrn-'+mid+'" placeholder="부재명" style="flex:2;min-width:0" value="'+(data.name||'')+'">'
+    +'<input type="number" class="fi" id="mrv-'+mid+'" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="'+(data.qty||'')+'">'
+    +'<div style="position:relative;flex-shrink:0">'
+      +'<input type="text" class="fi" id="mru-'+mid+'" placeholder="단위▼" style="width:70px;cursor:pointer;text-align:center;caret-color:transparent" readonly'
+        +' value="'+(data.unit||'')+'" onclick="toggleUnitPicker('mru-'+mid+'')">'
+      +'<div id="up-mru-'+mid+'" class="unit-picker" style="display:none"></div>'
+    +'</div>'
+    +'<button type="button" class="btn bd bsm" onclick="document.getElementById('mr-'+mid+'').remove()" style="padding:6px 10px;flex-shrink:0">✕</button>';
+  const container=document.getElementById('mat-rows-'+sid);
+  if(container) container.appendChild(div);
+}
+
+function getMatRows(sid){
+  const container=document.getElementById('mat-rows-'+sid);
+  if(!container) return [];
+  const rows=container.querySelectorAll('[id^="mr-"]');
+  const result=[];
+  rows.forEach(function(row){
+    const mid=row.id.replace('mr-','');
+    const name=(document.getElementById('mrn-'+mid)||{}).value||'';
+    const qty=(document.getElementById('mrv-'+mid)||{}).value||'';
+    const unit=(document.getElementById('mru-'+mid)||{}).value||'';
+    if(name.trim()||qty) result.push({name:name.trim(), qty:qty?parseFloat(qty):null, unit:unit});
+  });
+  return result;
+}
+
 
 function toggleUnitPicker(inputId){
   // 다른 피커 전부 닫기
@@ -1504,17 +1537,11 @@ async function saveLog(){
       if(!sub){ toast(`${cat}: 소분류를 선택하세요`,'err'); return; }
       if(!md){ toast(`${cat} > ${sub}: 인원/시간을 입력하세요`,'err'); return; }
       const pIdx=payloads.length;
-      const qty1v=document.getElementById(`srq1v-${sid}`)?.value||null;
-      const qty1u=document.getElementById(`srq1u-${sid}`)?.value||null;
-      const qty2v=document.getElementById(`srq2v-${sid}`)?.value||null;
-      const qty2u=document.getElementById(`srq2u-${sid}`)?.value||null;
-      const mat1=document.getElementById(`srmat1-${sid}`)?.value||null;
-      const mat2=document.getElementById(`srmat2-${sid}`)?.value||null;
+      const mats=getMatRows(sid);
       payloads.push({work_date:date,category:cat,sub_category:sub,
         detail:document.getElementById(`srd-${sid}`)?.value||'',
         manday:md, workers:parseInt(document.getElementById(`srw-${sid}`)?.value)||null,
-        mat1_name:mat1||null, qty1_val:qty1v?parseFloat(qty1v):null, qty1_unit:qty1u||null,
-        mat2_name:mat2||null, qty2_val:qty2v?parseFloat(qty2v):null, qty2_unit:qty2u||null,
+        materials:mats.length?JSON.stringify(mats):null,
         start_time:startTime,end_time:endTime,weather,manager,memo,site_name:siteName});
       if(sr===subRows[0]) photoMap.push({pIdx,cid});
     }
