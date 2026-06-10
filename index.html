@@ -810,7 +810,7 @@ async function loadAll(){
   // 현장 복원 - id를 문자열 그대로 유지 (int/uuid 모두 호환)
   const sid=localStorage.getItem('sel_site_id');
   const sname=localStorage.getItem('sel_site_name');
-  if(sid&&sname){ currentSiteId=sid; updateHeaderSite(sname); }
+  if(sid&&sname){ currentSiteId=Number(sid); updateHeaderSite(sname); }
   await Promise.all([loadWorkTypes(), loadSites()]);
   await initDateFilters();
   loadDashboard(); loadLogs(); loadSummary();
@@ -2517,7 +2517,7 @@ function renderSiteList(){
   const dq=(document.getElementById('done-site-search')?.value||'').trim().toLowerCase();
 
   function siteCard(s, isDone){
-    const isSel=s.id==currentSiteId;
+    const isSel=Number(s.id)===Number(currentSiteId);
     const sid=String(s.id);
     return `<div class="site-item ${isSel?'active':''} ${isDone?'site-done':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -2593,7 +2593,7 @@ function copyAllSiteInfo(id){
 }
 function selectSite(id){
   const s=sites.find(x=>x.id==id); if(!s) return;
-  currentSiteId=s.id;
+  currentSiteId=Number(s.id);
   localStorage.setItem('sel_site_id', String(s.id));
   localStorage.setItem('sel_site_name', s.name);
   updateHeaderSite(s.name);
@@ -2630,7 +2630,7 @@ async function addSite(){
 }
 async function deleteSite(id){
   if(!confirm('현장을 삭제할까요?')) return;
-  if(id==currentSiteId){ currentSiteId=null; localStorage.removeItem('sel_site_id'); localStorage.removeItem('sel_site_name'); updateHeaderSite(null); }
+  if(Number(id)===Number(currentSiteId)){ currentSiteId=null; localStorage.removeItem('sel_site_id'); localStorage.removeItem('sel_site_name'); updateHeaderSite(null); }
   await sbClient.from('sites').delete().eq('id',id);
   await loadSites(); toast('삭제됨','ok');
 }
@@ -2660,7 +2660,7 @@ async function saveEditSite(){
     is_completed:s.is_completed||false
   }).eq('id',id);
   if(error){ toast('수정 실패: '+error.message,'err'); return; }
-  if(id==currentSiteId){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
+  if(Number(id)===Number(currentSiteId)){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
   document.getElementById('edit-site-modal').classList.remove('open');
   await loadSites(); toast('수정됨 ✓','ok');
 }
