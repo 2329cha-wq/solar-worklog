@@ -6,6 +6,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0F2027">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>태양광 작업일지</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
@@ -241,11 +243,25 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .cal-dot{border-radius:2px;padding:1px 3px;font-size:8px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px}
 .cal-dot.work{background:rgba(41,182,246,0.2);color:#29B6F6}
 .cal-dot.ev{background:rgba(245,166,35,0.2);color:var(--sun)}
-.cal-dot.site0{background:rgba(46,184,92,0.2);color:#2eb85c}
-.cal-dot.site1{background:rgba(155,89,182,0.2);color:#9b59b6}
-.cal-dot.site2{background:rgba(231,76,60,0.2);color:#e74c3c}
-.cal-dot.site3{background:rgba(52,152,219,0.2);color:#3498db}
+.cal-dot.site0{background:rgba(46,184,92,0.28);color:rgba(120,230,150,1);font-weight:700}
+.cal-dot.site1{background:rgba(180,110,220,0.28);color:rgba(210,160,255,1);font-weight:700}
+.cal-dot.site2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
+.cal-dot.site3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
 .cal-dot.site-s{font-weight:900}
+/* s0~s4 (달력 탭용 - 모바일에도 동일하게 밝게) */
+.cal-dot.s0{background:rgba(46,184,92,0.28);color:rgba(120,230,150,1);font-weight:700}
+.cal-dot.s1{background:rgba(180,110,220,0.28);color:rgba(210,160,255,1);font-weight:700}
+.cal-dot.s2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
+.cal-dot.s3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
+.cal-dot.s4{background:rgba(230,126,34,0.28);color:rgba(255,180,80,1);font-weight:700}
+.cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
+.cal-dot.ev-dot.done{opacity:0.4}
+.cal-dot.ev-s0{background:rgba(46,184,92,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s1{background:rgba(155,89,182,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s2{background:rgba(231,76,60,0.85);color:#fff;font-weight:900}
+.cal-dot.ev-s3{background:rgba(52,152,219,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s4{background:rgba(230,126,34,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s0.done,.cal-dot.ev-s1.done,.cal-dot.ev-s2.done,.cal-dot.ev-s3.done,.cal-dot.ev-s4.done{opacity:0.4}
 /* ── 이벤트 ── */
 .ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;margin-bottom:7px;position:relative}
 .ev-item.ev-done{opacity:0.5}
@@ -283,11 +299,6 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .cal-dot.work{background:rgba(41,182,246,0.2);color:#29B6F6}
 .cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
 .cal-dot.ev-dot.done{opacity:0.4}
-.cal-dot.s0{background:rgba(46,184,92,0.2);color:#2eb85c}
-.cal-dot.s1{background:rgba(155,89,182,0.2);color:#9b59b6}
-.cal-dot.s2{background:rgba(231,76,60,0.18);color:#e74c3c}
-.cal-dot.s3{background:rgba(52,152,219,0.2);color:#3498db}
-.cal-dot.s4{background:rgba(230,126,34,0.2);color:#e67e22}
 .cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .cal-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim)}
 /* ── 이벤트 ── */
@@ -329,17 +340,6 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .cal-dot.work{background:rgba(41,182,246,0.2);color:#7EC8E3}
 .cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
 .cal-dot.ev-dot.done{opacity:0.35}
-.cal-dot.s0{background:rgba(46,184,92,0.1);color:rgba(46,184,92,0.7)}
-.cal-dot.s1{background:rgba(155,89,182,0.1);color:rgba(155,89,182,0.7)}
-.cal-dot.s2{background:rgba(231,76,60,0.08);color:rgba(231,76,60,0.7)}
-.cal-dot.s3{background:rgba(52,152,219,0.1);color:rgba(52,152,219,0.7)}
-.cal-dot.s4{background:rgba(230,126,34,0.1);color:rgba(230,126,34,0.7)}
-.cal-dot.ev-s0{background:rgba(46,184,92,0.75);color:#fff;font-weight:900}
-.cal-dot.ev-s1{background:rgba(155,89,182,0.75);color:#fff;font-weight:900}
-.cal-dot.ev-s2{background:rgba(231,76,60,0.7);color:#fff;font-weight:900}
-.cal-dot.ev-s3{background:rgba(52,152,219,0.75);color:#fff;font-weight:900}
-.cal-dot.ev-s4{background:rgba(230,126,34,0.75);color:#fff;font-weight:900}
-.cal-dot.ev-s0.done,.cal-dot.ev-s1.done,.cal-dot.ev-s2.done,.cal-dot.ev-s3.done,.cal-dot.ev-s4.done{opacity:0.4}
 .cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 .cal-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim)}
 /* ── 날짜 클릭 팝업 ── */
@@ -597,7 +597,15 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
       <div class="fg"><label class="fl">착공일</label><input type="date" class="fi" id="es-start"></div>
       <div class="fg"><label class="fl">준공예정일</label><input type="date" class="fi" id="es-end"></div>
     </div>
-    <div style="display:flex;gap:8px">
+    <div class="fg" style="margin-top:4px">
+      <label class="fl">공사 상태</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="es-status-label" style="font-size:13px;color:var(--text-dim)">진행중</span>
+        <button id="es-complete-btn" class="btn bg bsm" onclick="toggleSiteComplete()" style="padding:8px 16px">✅ 공사완료 처리</button>
+      </div>
+    </div>
+    <input type="hidden" id="es-is-completed" value="0">
+    <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn bs" style="flex:1" onclick="document.getElementById('edit-site-modal').classList.remove('open')">취소</button>
       <button class="btn bp" style="flex:2" onclick="saveEditSite()">💾 저장</button>
     </div>
@@ -1147,6 +1155,7 @@ async function loadCalendarTab(){
   if(!sbClient) return;
   const el=document.getElementById('cal-content');
   el.innerHTML='<div class="loading"><div class="spinner"></div>로딩 중...</div>';
+  try{
   const[{data:logs},{data:allSitesFresh}]=await Promise.all([
     sbClient.from('daily_logs').select('work_date,site_name,category,manday,detail,workers,start_time,end_time,memo,sub_category'),
     sbClient.from('sites').select('*').order('created_at')
@@ -1188,6 +1197,10 @@ async function loadCalendarTab(){
       }
     });
   }
+  }catch(err){
+    el.innerHTML=`<div class="config-warn">⚠️ 달력 로딩 오류: ${err.message}</div>`;
+    console.error('loadCalendarTab error:',err);
+  }
 }
 
 function buildCalendarHtml(allLogs, allEvents, allSites){
@@ -1203,7 +1216,7 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
   allEvents.forEach(e=>{ if(e.event_date){ if(!evMap[e.event_date]) evMap[e.event_date]=[]; evMap[e.event_date].push(e); }});
 
   const siteColors=['s0','s1','s2','s3','s4'];
-  const siteRanges=allSites.filter(s=>s.start_date).map((s,i)=>({
+  const siteRanges=allSites.filter(s=>s.start_date&&!s.is_completed).map((s,i)=>({
     name:s.name, start:s.start_date, end:s.end_date||s.start_date,
     cls:siteColors[i%siteColors.length],
     evCls:'ev-'+siteColors[i%siteColors.length]
@@ -1225,9 +1238,9 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
       if(ds>=sr.start&&ds<=sr.end){
         const isS=ds===sr.start,isE=ds===sr.end;
         if(isS||isE){
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px">${isS?'▶'+sr.name.slice(0,5):'■종료'}</span>`;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px;filter:brightness(1.4);box-shadow:0 0 4px rgba(255,255,255,0.2)">${isS?'▶'+sr.name.slice(0,5):'■종료'}</span>`;
         } else {
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 3px;opacity:0.5">─</span>`;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 3px;opacity:0.65">─</span>`;
         }
       }
     });
@@ -1842,6 +1855,7 @@ let matRowCount=0;
 function addMatRow(sid, data){
   matRowCount++;
   const mid=sid+'_m'+matRowCount;
+  const div=document.createElement('div');
   div.id='mr-'+mid;
   div.style.cssText='background:var(--sky-dark);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:7px';
   const name=(data&&data.name)||'';
@@ -2469,7 +2483,7 @@ function renderSiteList(){
     return `<div class="site-item ${isSel?'active':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div style="font-size:13px;font-weight:700">${s.name}${isSel?'<span class="site-badge">선택중</span>':''}</div>
+          <div style="font-size:13px;font-weight:700">${s.name}${isSel?'<span class="site-badge">선택중</span>':''}${s.is_completed?'<span style="display:inline-block;background:rgba(39,174,96,0.2);color:var(--green);border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">✅ 완료</span>':''}</div>
           <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${[s.client,s.contractor,s.start_date].filter(Boolean).join(' · ')}</div>
         </div>
         <div style="display:flex;gap:5px;margin-left:8px">
@@ -2523,10 +2537,29 @@ function selectSite(id,name){
 async function addSite(){
   const name=document.getElementById('new-site-name').value.trim();
   if(!name){ toast('현장명을 입력하세요','err'); return; }
-  const{error}=await sbClient.from('sites').insert({name,client:document.getElementById('new-site-client').value.trim(),contractor:document.getElementById('new-site-contractor').value.trim(),location:document.getElementById('new-site-location')?.value.trim()||null,start_date:document.getElementById('new-site-start').value||null,end_date:document.getElementById('new-site-end').value||null});
+  const{data:newSite, error}=await sbClient.from('sites').insert({
+    name,
+    client:document.getElementById('new-site-client').value.trim(),
+    contractor:document.getElementById('new-site-contractor').value.trim(),
+    location:document.getElementById('new-site-location')?.value.trim()||null,
+    start_date:document.getElementById('new-site-start').value||null,
+    end_date:document.getElementById('new-site-end').value||null
+  }).select().single();
   if(error){ toast('추가 실패','err'); return; }
+  // 기본 이벤트 4개 자동 생성
+  const defaultEvents=[
+    {title:'모듈 입고',detail:'모듈 입고 일정'},
+    {title:'수배전반 및 인버터',detail:'수배전반 · 인버터 설치'},
+    {title:'구조물',detail:'구조물 설치'},
+    {title:'사용전검사',detail:'사용전검사 일정'},
+  ];
+  const evPayloads=defaultEvents.map((ev,i)=>({
+    title:ev.title, detail:ev.detail,
+    site_name:name, event_date:null, is_completed:false, sort_order:i
+  }));
+  await sbClient.from('events').insert(evPayloads);
   ['new-site-name','new-site-client','new-site-contractor','new-site-start','new-site-end'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  await loadSites(); toast('현장 추가됨 ✓','ok');
+  await loadSites(); toast('현장 추가됨 ✓  (기본 이벤트 4개 생성)','ok');
 }
 async function deleteSite(id){
   if(!confirm('현장을 삭제할까요?')) return;
@@ -2543,13 +2576,48 @@ function openEditSite(id){
   document.getElementById('es-location').value=s.location||'';
   document.getElementById('es-start').value=s.start_date||'';
   document.getElementById('es-end').value=s.end_date||'';
+  // 공사 완료 상태
+  const isComp=s.is_completed?true:false;
+  document.getElementById('es-is-completed').value=isComp?'1':'0';
+  const statusLabel=document.getElementById('es-status-label');
+  const completeBtn=document.getElementById('es-complete-btn');
+  if(isComp){
+    statusLabel.textContent='✅ 공사완료'; statusLabel.style.color='var(--green)';
+    completeBtn.textContent='🔄 작업중으로 되돌리기'; completeBtn.className='btn bs bsm'; completeBtn.style.padding='8px 16px';
+  } else {
+    statusLabel.textContent='진행중'; statusLabel.style.color='var(--text-dim)';
+    completeBtn.textContent='✅ 공사완료 처리'; completeBtn.className='btn bg bsm'; completeBtn.style.padding='8px 16px';
+  }
   document.getElementById('edit-site-modal').classList.add('open');
+}
+function toggleSiteComplete(){
+  const cur=document.getElementById('es-is-completed').value==='1';
+  const next=!cur;
+  document.getElementById('es-is-completed').value=next?'1':'0';
+  const statusLabel=document.getElementById('es-status-label');
+  const completeBtn=document.getElementById('es-complete-btn');
+  if(next){
+    statusLabel.textContent='✅ 공사완료'; statusLabel.style.color='var(--green)';
+    completeBtn.textContent='🔄 작업중으로 되돌리기'; completeBtn.className='btn bs bsm'; completeBtn.style.padding='8px 16px';
+  } else {
+    statusLabel.textContent='진행중'; statusLabel.style.color='var(--text-dim)';
+    completeBtn.textContent='✅ 공사완료 처리'; completeBtn.className='btn bg bsm'; completeBtn.style.padding='8px 16px';
+  }
 }
 async function saveEditSite(){
   const id=document.getElementById('es-id').value;
   const name=document.getElementById('es-name').value.trim();
   if(!name){ toast('현장명을 입력하세요','err'); return; }
-  const{error}=await sbClient.from('sites').update({name,client:document.getElementById('es-client').value.trim(),contractor:document.getElementById('es-contractor').value.trim(),location:document.getElementById('es-location').value.trim(),start_date:document.getElementById('es-start').value||null,end_date:document.getElementById('es-end').value||null}).eq('id',id);
+  const isCompleted=document.getElementById('es-is-completed').value==='1';
+  const{error}=await sbClient.from('sites').update({
+    name,
+    client:document.getElementById('es-client').value.trim(),
+    contractor:document.getElementById('es-contractor').value.trim(),
+    location:document.getElementById('es-location').value.trim(),
+    start_date:document.getElementById('es-start').value||null,
+    end_date:document.getElementById('es-end').value||null,
+    is_completed:isCompleted
+  }).eq('id',id);
   if(error){ toast('수정 실패','err'); return; }
   if(id==currentSiteId){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
   document.getElementById('edit-site-modal').classList.remove('open');
@@ -2969,6 +3037,12 @@ function toast(msg,type=''){
   setTimeout(()=>t.className='toast',2500);
 }
 </script>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/solar-worklog/sw.js').catch(()=>{});}</script>
+<script>if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/solar-worklog/sw.js').then(reg=>{
+    reg.update(); // 항상 최신 SW 체크
+  }).catch(()=>{});
+  // 새 SW 설치되면 즉시 활성화
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{ /* 자동 적용 */ });
+}</script>
 </body>
 </html>
