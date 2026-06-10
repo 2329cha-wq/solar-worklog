@@ -1218,7 +1218,7 @@ async function loadCalendarTab(){
     Sortable.create(siteGroups,{handle:'.site-drag-handle',animation:150,
       onEnd:async()=>{
         const items=[...siteGroups.querySelectorAll('[data-site-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('sites').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-site-id')))));
+        await Promise.all(items.map((el,i)=>sbClient.from('sites').update({sort_order:i}).eq('id',Number(el.getAttribute('data-site-id')))));
       }
     });
   }
@@ -2631,7 +2631,7 @@ async function addSite(){
 async function deleteSite(id){
   if(!confirm('현장을 삭제할까요?')) return;
   if(Number(id)===Number(currentSiteId)){ currentSiteId=null; localStorage.removeItem('sel_site_id'); localStorage.removeItem('sel_site_name'); updateHeaderSite(null); }
-  await sbClient.from('sites').delete().eq('id',id);
+  await sbClient.from('sites').delete().eq('id', Number(id));
   await loadSites(); toast('삭제됨','ok');
 }
 function openEditSite(id){
@@ -2658,7 +2658,7 @@ async function saveEditSite(){
     start_date:document.getElementById('es-start').value||null,
     end_date:document.getElementById('es-end').value||null,
     is_completed:s.is_completed||false
-  }).eq('id',id);
+  }).eq('id', Number(id));
   if(error){ toast('수정 실패: '+error.message,'err'); return; }
   if(Number(id)===Number(currentSiteId)){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
   document.getElementById('edit-site-modal').classList.remove('open');
@@ -2667,14 +2667,14 @@ async function saveEditSite(){
 async function completeSite(id){
   const s=sites.find(x=>x.id==id); if(!s) return;
   if(!confirm(`'${s.name}'\n공사완료 처리하시겠습니까?\n\n완료된 현장은 달력에서 표시되지 않습니다.`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id', s.id);
+  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id', Number(s.id));
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
   await loadSites(); toast(s.name+' 공사완료 처리됨 ✓','ok');
 }
 async function revertSite(id){
   const s=sites.find(x=>x.id==id); if(!s) return;
   if(!confirm(`'${s.name}'\n작업중으로 되돌리시겠습니까?`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id', s.id);
+  const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id', Number(s.id));
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
   await loadSites(); toast(s.name+' 진행중으로 변경됨 ✓','ok');
 }
