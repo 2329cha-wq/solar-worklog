@@ -1891,7 +1891,7 @@ async function openEditSubLog(id){
   if(siteId) sel.value=siteId; else if(currentSiteId) sel.value=currentSiteId;
   const _w=parseFloat(l.workers)||0, _md=parseFloat(l.manday)||0;
   const _h=_w>0?Math.round(_md*8/_w*100)/100:8;
-  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday,mat1_name:l.mat1_name||'',qty1_val:l.qty1_val||'',qty1_unit:l.qty1_unit||'',mat2_name:l.mat2_name||'',qty2_val:l.qty2_val||'',qty2_unit:l.qty2_unit||''}]}));
+  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday,mat1_name:l.mat1_name||'',qty1_val:l.qty1_val||'',qty1_unit:l.qty1_unit||'',mat2_name:l.mat2_name||'',qty2_val:l.qty2_val||'',qty2_unit:l.qty2_unit||''}]});
   ['log-start','log-end'].forEach(elid=>{
     const el=document.getElementById(elid);
     if(el) el.oninput=()=>syncAllSubHours();
