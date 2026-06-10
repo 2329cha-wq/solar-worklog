@@ -891,7 +891,7 @@ async function loadDashboard(){
     Sortable.create(plist,{handle:'.plan-drag',animation:150,
       onEnd:async()=>{
         const items=[...plist.querySelectorAll('[data-plan-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id'))))));
+        await Promise.all(items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id')))));
       }
     });
   }
@@ -900,7 +900,7 @@ async function loadDashboard(){
     Sortable.create(evlist,{handle:'.ev-drag',animation:150,
       onEnd:async()=>{
         const items=[...evlist.querySelectorAll('[data-ev-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id'))))));
+        await Promise.all(items.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id')))));
       }
     });
   }
@@ -938,106 +938,6 @@ function updateHeaderSite(name){
   if(!el) return;
   if(name){ el.textContent='📍 '+name; el.className='header-site'; }
   else{ el.textContent='현장을 선택하세요'; el.className='header-site empty'; }
-}
-
-// ═══════════════════════════════════════════
-// 대시보드
-// ═══════════════════════════════════════════
-async function loadDashboard(){
-  if(!sbClient) return;
-  const el=document.getElementById('dash-content');
-  const[{data:logs,error:e1},{data:plans,error:e2}]=await Promise.all([
-    sbClient.from('daily_logs').select('*'),
-    sbClient.from('work_plans').select('*').order('sort_order',{ascending:true})
-  ]);
-  if(e1){ el.innerHTML=`<div class="config-warn">⚠️ DB 오류: ${e1.message}</div>`; return; }
-
-  const allLogs=logs||[];
-  const allPlans=plans||[];
-  cachePlans(allPlans); // 수정 모달용 캐시
-
-  // 현장 필터링
-  const siteLogs=currentSiteId? allLogs.filter(l=>l.site_name===sites.find(s=>s.id===currentSiteId)?.name) : allLogs;
-  const sitePlans=currentSiteId? allPlans.filter(p=>p.site_name===sites.find(s=>s.id===currentSiteId)?.name) : allPlans;
-
-  // 날짜별 고유 인원 계산 (같은 날 같은 인원 수 중복 안 함)
-  const dateWorkerMap={};
-  siteLogs.forEach(l=>{
-    if(!dateWorkerMap[l.work_date]) dateWorkerMap[l.work_date]=l.workers||0;
-    else dateWorkerMap[l.work_date]=Math.max(dateWorkerMap[l.work_date],l.workers||0);
-  });
-  const totalWorkers=Object.values(dateWorkerMap).reduce((s,v)=>s+v,0);
-  const totalMd=siteLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
-  const totalDays=new Set(siteLogs.map(l=>l.work_date)).size;
-  const recent7=new Set(siteLogs.filter(l=>(new Date()-new Date(l.work_date))/86400000<=7).map(l=>l.work_date)).size;
-
-  // 현장 카드
-  const selSite=sites.find(s=>s.id===currentSiteId);
-  const siteCard=selSite?`
-    <div class="card" style="border-color:rgba(245,166,35,0.5);margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div style="font-size:15px;font-weight:700;color:var(--sun);margin-bottom:5px">${selSite.name}</div>
-          <div style="font-size:12px;color:var(--text-dim);line-height:1.9">
-            ${selSite.client?'발주처: '+selSite.client+'<br>':''}
-            ${selSite.contractor?'시공사: '+selSite.contractor+'<br>':''}
-            ${selSite.start_date?'착공: '+selSite.start_date+(selSite.end_date?' ~ 준공: '+selSite.end_date:''):''}
-          </div>
-        </div>
-        <button class="btn bs bsm" onclick="switchTab('settings')">관리</button>
-      </div>
-    </div>`
-    :'<div class="config-warn" style="margin-bottom:14px">🏗️ 설정 탭에서 현장을 선택해주세요</div>';
-
-  // 예상 총 M/D (계획 합산)
-  const plannedTotal=sitePlans.reduce((s,p)=>s+parseFloat(p.planned_manday||0),0);
-  const remainMd=plannedTotal-totalMd;
-  const remainColor=remainMd<0?'var(--red)':'#29B6F6';
-
-  // 통계
-  const statsHtml=`
-    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
-      <div class="stat-card" style="border-color:rgba(245,166,35,0.4)">
-        <div class="stat-val">${plannedTotal.toFixed(2)}</div>
-        <div class="stat-lbl">예상 총 M/D</div>
-      </div>
-      <div class="stat-card" style="border-color:rgba(41,182,246,0.4)">
-        <div class="stat-val" style="color:#29B6F6">${totalMd.toFixed(2)}</div>
-        <div class="stat-lbl">현재 M/D</div>
-      </div>
-      <div class="stat-card" style="border-color:${remainMd<0?'rgba(231,76,60,0.4)':'rgba(41,182,246,0.2)'}">
-        <div class="stat-val" style="color:${remainColor}">${Math.abs(remainMd).toFixed(2)}${remainMd<0?' ▲':' ▼'}</div>
-        <div class="stat-lbl">${remainMd<0?'초과 M/D':'남은 M/D'}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val">${totalDays}</div>
-        <div class="stat-lbl">작업일수</div>
-      </div>
-    </div>`;
-
-  // 대분류별 실제 맨데이 자동 집계 (작업일지 DB 기준)
-  const actualByCategory={};
-  siteLogs.forEach(l=>{
-    if(!actualByCategory[l.category]) actualByCategory[l.category]=0;
-    actualByCategory[l.category]+=parseFloat(l.manday||0);
-  });
-
-  // 작업 계획 vs 실적
-  const planHtml=buildPlanHtml(sitePlans, actualByCategory);
-
-  el.innerHTML=siteCard+statsHtml+planHtml;
-  // 계획 순서 드래그 초기화
-  const plist=document.getElementById('plan-list-sortable');
-  if(plist&&window.Sortable){
-    Sortable.create(plist,{
-      handle:'.plan-drag',animation:150,
-      onEnd:async()=>{
-        const items=[...plist.querySelectorAll('[data-plan-id]')];
-        const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id')))));
-        await Promise.all(updates);
-      }
-    });
-  }
 }
 
 // ── 계획 ──
@@ -1210,7 +1110,7 @@ async function loadCalendarTab(){
     if(window.Sortable) Sortable.create(evlist,{handle:'.ev-drag',animation:150,
       onEnd:async()=>{
         const allItems=[...document.querySelectorAll('[data-ev-id]')];
-        await Promise.all(allItems.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id'))))));
+        await Promise.all(allItems.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id')))));
       }
     });
   });
@@ -1568,7 +1468,7 @@ async function saveComplete(){
   const plist=document.getElementById('plan-list-sortable');
   if(plist){
     const items=[...plist.querySelectorAll('[data-plan-id]')];
-    const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id')))));
+    const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id'))));
     await Promise.all(updates);
   }
   const{error}=await sbClient.from('work_plans').update({is_completed:true, completed_at:today}).eq('id',Number(planId));
@@ -2454,7 +2354,7 @@ function renderWorkTypeList(){
         const items=[...sl.querySelectorAll('[data-id]')];
         const cat=sl.getAttribute('data-cat');
         const base=Math.floor((workTypes.find(w=>w.category===cat)?.sort_order||0)/100)*100;
-        const ups=items.map((item,i)=>sbClient.from('work_types').update({sort_order:base+i+1}).eq('id',Number(item.getAttribute('data-id')))));
+        const ups=items.map((item,i)=>sbClient.from('work_types').update({sort_order:base+i+1}).eq('id',Number(item.getAttribute('data-id'))));
         await Promise.all(ups); await loadWorkTypes();
       }});
     });
