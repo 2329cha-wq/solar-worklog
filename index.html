@@ -367,6 +367,49 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .ev-badge.normal{background:rgba(41,182,246,0.12);color:#29B6F6}
 .ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
 .site-drag-handle{cursor:grab;color:var(--text-dim);user-select:none;padding:0 6px;font-size:15px;touch-action:none}
+
+/* ── 모바일 달력 전용 스타일 (max-width:767px) ── */
+@media(max-width:767px){
+  /* 달력 래퍼 여백 축소 */
+  .cal-wrap{padding:8px 6px}
+  .cal-header{margin-bottom:8px}
+  .cal-title{font-size:13px}
+  .cal-nav{padding:3px 8px;font-size:11px}
+  .cal-refresh{padding:3px 8px;font-size:10px}
+
+  /* 그리드 간격 최소화 */
+  .cal-grid{gap:1px}
+  .cal-dow{font-size:10px;padding:3px 0}
+
+  /* 셀 높이를 화면에 맞게 */
+  .cal-day{
+    min-height:0;
+    height:calc((100vw - 44px) / 7 * 1.35);  /* 7칸, 여백 제외, 비율 조정 */
+    padding:2px 2px;
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .cal-day-num{font-size:10px;font-weight:700;margin-bottom:1px;line-height:1}
+  .cal-day.today .cal-day-num{font-size:11px}
+
+  /* 달력 내 dot: 텍스트 더 짧게, 폰트 더 작게 */
+  .cal-dot{
+    font-size:7px;
+    padding:0px 2px;
+    margin-bottom:1px;
+    line-height:1.5;
+    border-radius:2px;
+  }
+
+  /* 범례 작게 */
+  .cal-legend{gap:5px;margin-top:8px;padding-top:7px}
+  .cal-legend-item{font-size:10px}
+
+  /* 날짜 팝업 모바일 최적화 */
+  .day-popup-overlay{padding:8px}
+  .day-popup{padding:14px 12px;max-height:88vh}
+  .day-popup-title{font-size:14px;margin-bottom:10px}
+}
 </style>
 </head>
 <body>
@@ -1233,13 +1276,15 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
     const isToday=new Date(y,m,d).getTime()===today.getTime();
     const dayLogs=logMap[ds]||[], dayEvs=evMap[ds]||[];
     let bars='';
+    const isMobile=window.innerWidth<768;
     siteRanges.forEach(sr=>{
       if(ds>=sr.start&&ds<=sr.end){
         const isS=ds===sr.start,isE=ds===sr.end;
         if(isS||isE){
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px;filter:brightness(1.4);box-shadow:0 0 4px rgba(255,255,255,0.2)">${isS?'▶'+sr.name.slice(0,5):'■종료'}</span>`;
+          const nameLen=isMobile?3:5;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px;filter:brightness(1.4);box-shadow:0 0 4px rgba(255,255,255,0.2)">${isS?'▶'+sr.name.slice(0,nameLen):'■종'}</span>`;
         } else {
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 3px;opacity:0.65">─</span>`;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 2px;opacity:0.65">─</span>`;
         }
       }
     });
@@ -1247,11 +1292,14 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
     if(dayLogs.length){
       const total=dayLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
       const sn=dayLogs[0].site_name||'';
-      logDot=`<span class="cal-dot work">${sn?sn.slice(0,4)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
+      const snSlice=isMobile?2:4;
+      logDot=`<span class="cal-dot work">${sn?sn.slice(0,snSlice)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
     }
-    const evDots=dayEvs.slice(0,2).map(e=>{
+    const evDotMax=isMobile?1:2;
+    const evTitleLen=isMobile?4:6;
+    const evDots=dayEvs.slice(0,evDotMax).map(e=>{
       const ec=siteEvClsMap[e.site_name]||'ev-dot';
-      return `<span class="cal-dot ${ec}${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''}${e.title}">${e.title.slice(0,6)}</span>`;
+      return `<span class="cal-dot ${ec}${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''}${e.title}">${e.title.slice(0,evTitleLen)}</span>`;
     }).join('');
     const hasWork=dayLogs.length?'has-work':'';
     cells+=`<div class="cal-day${isToday?' today':''} ${hasWork}" onclick="openDayPopup('${ds}')">`
