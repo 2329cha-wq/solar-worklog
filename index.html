@@ -329,11 +329,17 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .cal-dot.work{background:rgba(41,182,246,0.2);color:#7EC8E3}
 .cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
 .cal-dot.ev-dot.done{opacity:0.35}
-.cal-dot.s0{background:rgba(46,184,92,0.18);color:#2eb85c}
-.cal-dot.s1{background:rgba(155,89,182,0.18);color:#9b59b6}
-.cal-dot.s2{background:rgba(231,76,60,0.15);color:#e74c3c}
-.cal-dot.s3{background:rgba(52,152,219,0.18);color:#3498db}
-.cal-dot.s4{background:rgba(230,126,34,0.18);color:#e67e22}
+.cal-dot.s0{background:rgba(46,184,92,0.1);color:rgba(46,184,92,0.7)}
+.cal-dot.s1{background:rgba(155,89,182,0.1);color:rgba(155,89,182,0.7)}
+.cal-dot.s2{background:rgba(231,76,60,0.08);color:rgba(231,76,60,0.7)}
+.cal-dot.s3{background:rgba(52,152,219,0.1);color:rgba(52,152,219,0.7)}
+.cal-dot.s4{background:rgba(230,126,34,0.1);color:rgba(230,126,34,0.7)}
+.cal-dot.ev-s0{background:rgba(46,184,92,0.75);color:#fff;font-weight:900}
+.cal-dot.ev-s1{background:rgba(155,89,182,0.75);color:#fff;font-weight:900}
+.cal-dot.ev-s2{background:rgba(231,76,60,0.7);color:#fff;font-weight:900}
+.cal-dot.ev-s3{background:rgba(52,152,219,0.75);color:#fff;font-weight:900}
+.cal-dot.ev-s4{background:rgba(230,126,34,0.75);color:#fff;font-weight:900}
+.cal-dot.ev-s0.done,.cal-dot.ev-s1.done,.cal-dot.ev-s2.done,.cal-dot.ev-s3.done,.cal-dot.ev-s4.done{opacity:0.4}
 .cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 .cal-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim)}
 /* ── 날짜 클릭 팝업 ── */
@@ -680,7 +686,9 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
       <input type="text" class="fi" id="ev-title" placeholder="예) 기자재 입고, 장비 반입, 검사 일정">
     </div>
     <div class="fg"><label class="fl">세부 내용</label>
-      <textarea class="ft" id="ev-detail" style="min-height:70px" placeholder="상세 내용"></textarea>
+      <div style="background:var(--sky-dark);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius-sm);padding:8px 10px">
+        <textarea class="ft" id="ev-detail" style="min-height:60px;background:transparent;border:none;padding:0;margin:0" placeholder="상세 내용을 입력하세요"></textarea>
+      </div>
     </div>
     <div class="fg"><label class="fl">일정 날짜</label>
       <input type="date" class="fi" id="ev-date">
@@ -1196,8 +1204,13 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
 
   const siteColors=['s0','s1','s2','s3','s4'];
   const siteRanges=allSites.filter(s=>s.start_date).map((s,i)=>({
-    name:s.name, start:s.start_date, end:s.end_date||s.start_date, cls:siteColors[i%siteColors.length]
+    name:s.name, start:s.start_date, end:s.end_date||s.start_date,
+    cls:siteColors[i%siteColors.length],
+    evCls:'ev-'+siteColors[i%siteColors.length]
   }));
+  // 공사명→이벤트색상 맵
+  const siteEvClsMap={};
+  siteRanges.forEach(sr=>{ siteEvClsMap[sr.name]=sr.evCls; });
 
   const dowLabels=['일','월','화','수','목','금','토'];
   let cells='';
@@ -1211,7 +1224,11 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
     siteRanges.forEach(sr=>{
       if(ds>=sr.start&&ds<=sr.end){
         const isS=ds===sr.start,isE=ds===sr.end;
-        bars+=`<span class="cal-dot ${sr.cls}">${isS?'▶'+sr.name.slice(0,5):isE?'■끝':'━'}</span>`;
+        if(isS||isE){
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px">${isS?'▶'+sr.name.slice(0,5):'■종료'}</span>`;
+        } else {
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 3px;opacity:0.5">─</span>`;
+        }
       }
     });
     let logDot='';
@@ -1220,7 +1237,10 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
       const sn=dayLogs[0].site_name||'';
       logDot=`<span class="cal-dot work">${sn?sn.slice(0,4)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
     }
-    const evDots=dayEvs.slice(0,2).map(e=>`<span class="cal-dot ev-dot${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''  }${e.title}">${e.site_name?'['+e.site_name.slice(0,3)+'] ':''  }${e.title.slice(0,5)}</span>`).join('');
+    const evDots=dayEvs.slice(0,2).map(e=>{
+      const ec=siteEvClsMap[e.site_name]||'ev-dot';
+      return `<span class="cal-dot ${ec}${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''}${e.title}">${e.title.slice(0,6)}</span>`;
+    }).join('');
     const hasWork=dayLogs.length?'has-work':'';
     cells+=`<div class="cal-day${isToday?' today':''} ${hasWork}" onclick="openDayPopup('${ds}')">`
       +`<div class="cal-day-num">${d}</div>${bars}${logDot}${evDots}</div>`;
@@ -1229,7 +1249,10 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
   for(let i=1;i<=rem;i++) cells+=`<div class="cal-day other-month"><div class="cal-day-num">${i}</div></div>`;
 
   const mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const legend=siteRanges.map(sr=>`<span class="cal-legend-item"><span class="cal-dot ${sr.cls}" style="display:inline-block;padding:1px 6px">${sr.name.slice(0,10)}</span></span>`).join('');
+  const legend=siteRanges.map(sr=>`<span class="cal-legend-item">`
+    +`<span class="cal-dot ${sr.cls}" style="display:inline-block;padding:1px 6px;margin-right:2px">${sr.name.slice(0,8)}</span>`
+    +`<span class="cal-dot ${sr.evCls}" style="display:inline-block;padding:1px 5px">이벤트</span>`
+    +`</span>`).join('');
 
   return `<div class="cal-wrap">`
     +`<div class="cal-header">`
@@ -1312,14 +1335,18 @@ function buildEventHtmlGrouped(allEvents, today, allSites){
       else if(diff<=7){cls='ev-soon';badgeCls='soon';label='D-'+diff;}
       else label='D-'+diff;
     } else label='날짜 미정';
+    const dateDisp=ev.is_completed?ev.completed_at||'':ev.event_date||'';
     return `<div class="ev-item ${cls}" data-ev-id="${ev.id}">`
       +`<div style="display:flex;justify-content:space-between;align-items:flex-start">`
       +`<div style="display:flex;align-items:flex-start;gap:5px;flex:1;min-width:0">`
-      +`<span class="ev-drag" style="cursor:grab;color:var(--text-dim);user-select:none;padding-top:2px;flex-shrink:0;touch-action:none">☰</span>`
+      +`<span class="ev-drag" style="cursor:grab;color:var(--text-dim);user-select:none;padding-top:3px;flex-shrink:0;touch-action:none">☰</span>`
       +`<div style="flex:1;min-width:0">`
-      +`<div class="ev-title">${ev.title}</div>`
-      +(ev.detail?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:4px"><span class="qty-badge" style="background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.25);color:var(--sun)">📝 ${ev.detail}</span></div>`:'')
-      +`<span class="ev-badge ${badgeCls}">${ev.is_completed?'✓ '+(ev.completed_at||''):'📅 '+(ev.event_date||'')+' '+label}</span>`
+      +`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">`
+      +`<span class="ev-badge ${badgeCls}" style="font-size:13px;padding:3px 10px">${dateDisp}</span>`
+      +`<span style="font-size:11px;font-weight:700;color:var(--${badgeCls==='done'?'text-dim':badgeCls==='urgent'?'red':badgeCls==='soon'?'sun':'text'})">${label}</span>`
+      +`</div>`
+      +`<div class="ev-title" style="font-size:15px">${ev.title}</div>`
+      +(ev.detail?`<div style="margin:5px 0;display:flex;flex-wrap:wrap;gap:4px"><span class="qty-badge" style="background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.25);color:var(--sun);font-size:12px">📝 ${ev.detail}</span></div>`:'')
       +`</div></div>`
       +`<div style="display:flex;gap:4px;margin-left:6px;flex-shrink:0">`
       +(ev.is_completed
@@ -1815,7 +1842,7 @@ let matRowCount=0;
 function addMatRow(sid, data){
   matRowCount++;
   const mid=sid+'_m'+matRowCount;
-  const div=document.createElement('div');
+  div.id='mr-'+mid;
   div.style.cssText='background:var(--sky-dark);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:7px';
   const name=(data&&data.name)||'';
   const qty=(data&&data.qty!=null)?data.qty:'';
