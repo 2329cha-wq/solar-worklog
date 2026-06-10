@@ -215,6 +215,44 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   .toast{font-size:14px}
   .header-btn{font-size:13px;padding:9px 16px}
 }
+
+/* ── 대시보드 2열 레이아웃 ── */
+.dash-grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:700px){.dash-grid{grid-template-columns:1fr 1fr}}
+.dash-col{}
+/* ── 이벤트 카드 ── */
+.ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:8px;position:relative;transition:border-color 0.2s}
+.ev-item.ev-done{opacity:0.55;border-color:rgba(255,255,255,0.07)}
+.ev-item.ev-urgent{border-left:3px solid var(--red)}
+.ev-item.ev-soon{border-left:3px solid var(--sun)}
+.ev-item.ev-normal{border-left:3px solid #29B6F6}
+.ev-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+.ev-detail{font-size:12px;color:var(--text-dim);margin-bottom:5px;line-height:1.45}
+.ev-date{font-size:12px;font-weight:600}
+.ev-date.urgent{color:var(--red)}
+.ev-date.soon{color:var(--sun)}
+.ev-date.normal{color:#29B6F6}
+.ev-date.done{color:var(--text-dim)}
+/* ── 달력 ── */
+.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-title{font-size:15px;font-weight:700;color:var(--sun)}
+.cal-nav{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 10px;cursor:pointer;font-size:13px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text-dim);padding:4px 0}
+.cal-dow:first-child{color:#e74c3c}
+.cal-dow:last-child{color:#3498db}
+.cal-day{min-height:52px;background:var(--sky-dark);border-radius:4px;padding:3px 4px;position:relative;font-size:11px;cursor:default}
+.cal-day.other-month{opacity:0.3}
+.cal-day.today{background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.5)}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:2px}
+.cal-day.today .cal-day-num{color:var(--sun)}
+.cal-event-dot{border-radius:3px;padding:1px 4px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px;cursor:pointer}
+.cal-event-dot.work{background:rgba(41,182,246,0.25);color:#29B6F6}
+.cal-event-dot.ev{background:rgba(245,166,35,0.25);color:var(--sun)}
+.cal-event-dot.site-bar{background:rgba(46,184,92,0.2);color:#2eb85c;border-radius:2px}
+.cal-event-dot.site-start{background:rgba(46,184,92,0.4);color:#2eb85c}
+.cal-event-dot.site-end{background:rgba(231,76,60,0.3);color:var(--red)}
 </style>
 </head>
 <body>
@@ -303,6 +341,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
       <div class="fg"><label class="fl">발주처</label><input type="text" class="fi" id="new-site-client"></div>
       <div class="fg"><label class="fl">시공사</label><input type="text" class="fi" id="new-site-contractor"></div>
     </div>
+    <div class="fg"><label class="fl">공사위치</label><input type="text" class="fi" id="new-site-location" placeholder="시/군/구 등 위치"></div>
     <div class="fr">
       <div class="fg"><label class="fl">착공일</label><input type="date" class="fi" id="new-site-start"></div>
       <div class="fg"><label class="fl">준공예정일</label><input type="date" class="fi" id="new-site-end"></div>
@@ -510,6 +549,34 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   </div>
 </div>
 
+
+<!-- 이벤트 추가/수정 모달 -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal" style="max-height:80vh">
+    <div class="modal-title"><span id="event-modal-title">＋ 이벤트 추가</span>
+      <button class="modal-close" onclick="document.getElementById('event-modal').classList.remove('open')">✕</button>
+    </div>
+    <input type="hidden" id="ev-edit-id">
+    <div class="fg"><label class="fl">현장</label>
+      <select class="fs" id="ev-site">
+        <option value="">전체/공통</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">이벤트 제목 *</label>
+      <input type="text" class="fi" id="ev-title" placeholder="예) 기자재 입고, 장비 반입, 검사 일정">
+    </div>
+    <div class="fg"><label class="fl">세부 내용</label>
+      <textarea class="ft" id="ev-detail" style="min-height:70px" placeholder="상세 내용 입력"></textarea>
+    </div>
+    <div class="fg"><label class="fl">일정 날짜</label>
+      <input type="date" class="fi" id="ev-date">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn bs" style="flex:1" onclick="document.getElementById('event-modal').classList.remove('open')">취소</button>
+      <button class="btn bp" style="flex:2" onclick="saveEvent()">💾 저장</button>
+    </div>
+  </div>
+</div>
 <!-- 날짜 그룹 수정 모달 -->
 <div class="modal-overlay" id="date-group-edit-modal">
   <div class="modal" style="max-height:60vh">
@@ -622,38 +689,38 @@ function updateHeaderSite(name){
 async function loadDashboard(){
   if(!sbClient) return;
   const el=document.getElementById('dash-content');
-  const[{data:logs,error:e1},{data:plans,error:e2}]=await Promise.all([
+  const[{data:logs,error:e1},{data:plans,error:e2},{data:evs}]=await Promise.all([
     sbClient.from('daily_logs').select('*'),
-    sbClient.from('work_plans').select('*').order('sort_order',{ascending:true})
+    sbClient.from('work_plans').select('*').order('sort_order',{ascending:true}),
+    sbClient.from('events').select('*').order('sort_order',{ascending:true})
   ]);
   if(e1){ el.innerHTML=`<div class="config-warn">⚠️ DB 오류: ${e1.message}</div>`; return; }
+  if(e2) console.warn('work_plans 오류:', e2.message);
 
   const allLogs=logs||[];
-  const allPlans=plans||[];
-  cachePlans(allPlans); // 수정 모달용 캐시
+  const allPlans=e2?[]:(plans||[]);
+  const allEvents=evs||[];
+  cachePlans(allPlans);
 
-  // 현장 필터링
-  const siteLogs=currentSiteId? allLogs.filter(l=>l.site_name===sites.find(s=>s.id===currentSiteId)?.name) : allLogs;
-  const sitePlans=currentSiteId? allPlans.filter(p=>p.site_name===sites.find(s=>s.id===currentSiteId)?.name) : allPlans;
+  const selSite=sites.find(s=>s.id===currentSiteId);
+  const siteName=selSite?.name||null;
+  const siteLogs=siteName? allLogs.filter(l=>l.site_name===siteName) : allLogs;
+  const sitePlans=siteName? allPlans.filter(p=>p.site_name===siteName) : allPlans;
+  const siteEvents=siteName
+    ? allEvents.filter(e=>!e.site_name||e.site_name===siteName)
+    : allEvents;
 
-  // 날짜별 고유 인원 계산 (같은 날 같은 인원 수 중복 안 함)
-  const dateWorkerMap={};
-  siteLogs.forEach(l=>{
-    if(!dateWorkerMap[l.work_date]) dateWorkerMap[l.work_date]=l.workers||0;
-    else dateWorkerMap[l.work_date]=Math.max(dateWorkerMap[l.work_date],l.workers||0);
-  });
-  const totalWorkers=Object.values(dateWorkerMap).reduce((s,v)=>s+v,0);
   const totalMd=siteLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
   const totalDays=new Set(siteLogs.map(l=>l.work_date)).size;
-  const recent7=new Set(siteLogs.filter(l=>(new Date()-new Date(l.work_date))/86400000<=7).map(l=>l.work_date)).size;
+  const plannedTotal=sitePlans.reduce((s,p)=>s+parseFloat(p.planned_manday||0),0);
+  const remainMd=plannedTotal-totalMd;
+  const remainColor=remainMd<0?'var(--red)':'#29B6F6';
 
-  // 현장 카드
-  const selSite=sites.find(s=>s.id===currentSiteId);
   const siteCard=selSite?`
     <div class="card" style="border-color:rgba(245,166,35,0.5);margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div style="font-size:15px;font-weight:700;color:var(--sun);margin-bottom:5px">${selSite.name}</div>
+          <div style="font-size:15px;font-weight:700;color:var(--sun);margin-bottom:4px">${selSite.name}</div>
           <div style="font-size:12px;color:var(--text-dim);line-height:1.9">
             ${selSite.client?'발주처: '+selSite.client+'<br>':''}
             ${selSite.contractor?'시공사: '+selSite.contractor+'<br>':''}
@@ -665,52 +732,44 @@ async function loadDashboard(){
     </div>`
     :'<div class="config-warn" style="margin-bottom:14px">🏗️ 설정 탭에서 현장을 선택해주세요</div>';
 
-  // 예상 총 M/D (계획 합산)
-  const plannedTotal=sitePlans.reduce((s,p)=>s+parseFloat(p.planned_manday||0),0);
-  const remainMd=plannedTotal-totalMd;
-  const remainColor=remainMd<0?'var(--red)':'#29B6F6';
-
-  // 통계
   const statsHtml=`
-    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
-      <div class="stat-card" style="border-color:rgba(245,166,35,0.4)">
-        <div class="stat-val">${plannedTotal.toFixed(2)}</div>
-        <div class="stat-lbl">예상 총 M/D</div>
-      </div>
-      <div class="stat-card" style="border-color:rgba(41,182,246,0.4)">
-        <div class="stat-val" style="color:#29B6F6">${totalMd.toFixed(2)}</div>
-        <div class="stat-lbl">현재 M/D</div>
-      </div>
-      <div class="stat-card" style="border-color:${remainMd<0?'rgba(231,76,60,0.4)':'rgba(41,182,246,0.2)'}">
-        <div class="stat-val" style="color:${remainColor}">${Math.abs(remainMd).toFixed(2)}${remainMd<0?' ▲':' ▼'}</div>
-        <div class="stat-lbl">${remainMd<0?'초과 M/D':'남은 M/D'}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val">${totalDays}</div>
-        <div class="stat-lbl">작업일수</div>
-      </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px">
+      <div class="stat-card" style="border-color:rgba(245,166,35,0.4)"><div class="stat-val">${plannedTotal.toFixed(2)}</div><div class="stat-lbl">예상 총 M/D</div></div>
+      <div class="stat-card" style="border-color:rgba(41,182,246,0.4)"><div class="stat-val" style="color:#29B6F6">${totalMd.toFixed(2)}</div><div class="stat-lbl">현재 M/D</div></div>
+      <div class="stat-card" style="border-color:${remainMd<0?'rgba(231,76,60,0.4)':'rgba(41,182,246,0.2)'}"><div class="stat-val" style="color:${remainColor}">${Math.abs(remainMd).toFixed(2)}${remainMd<0?' ▲':' ▼'}</div><div class="stat-lbl">${remainMd<0?'초과 M/D':'남은 M/D'}</div></div>
+      <div class="stat-card"><div class="stat-val">${totalDays}</div><div class="stat-lbl">작업일수</div></div>
     </div>`;
 
-  // 대분류별 실제 맨데이 자동 집계 (작업일지 DB 기준)
   const actualByCategory={};
   siteLogs.forEach(l=>{
     if(!actualByCategory[l.category]) actualByCategory[l.category]=0;
     actualByCategory[l.category]+=parseFloat(l.manday||0);
   });
 
-  // 작업 계획 vs 실적
+  const today=new Date(); today.setHours(0,0,0,0);
+  const evHtml=buildEventHtml(siteEvents, today);
   const planHtml=buildPlanHtml(sitePlans, actualByCategory);
+  const calHtml=buildCalendarHtml(allLogs, allEvents, sites);
 
-  el.innerHTML=siteCard+statsHtml+planHtml;
-  // 계획 순서 드래그 초기화
+  el.innerHTML=siteCard+statsHtml
+    +'<div class="dash-grid"><div class="dash-col">'+evHtml+'</div><div class="dash-col">'+planHtml+'</div></div>'
+    +calHtml;
+
   const plist=document.getElementById('plan-list-sortable');
   if(plist&&window.Sortable){
-    Sortable.create(plist,{
-      handle:'.plan-drag',animation:150,
+    Sortable.create(plist,{handle:'.plan-drag',animation:150,
       onEnd:async()=>{
         const items=[...plist.querySelectorAll('[data-plan-id]')];
-        const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id'))));
-        await Promise.all(updates);
+        await Promise.all(items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id')))));
+      }
+    });
+  }
+  const evlist=document.getElementById('event-list-sortable');
+  if(evlist&&window.Sortable){
+    Sortable.create(evlist,{handle:'.ev-drag',animation:150,
+      onEnd:async()=>{
+        const items=[...evlist.querySelectorAll('[data-ev-id]')];
+        await Promise.all(items.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-ev-id')))));
       }
     });
   }
@@ -846,6 +905,234 @@ async function revertPlan(id){
   if(error){ toast('변경 실패: '+error.message,'err'); return; }
   toast('작업중으로 변경됨 ✓','ok'); loadDashboard();
 }
+
+
+// ════════════════════════════════════════════
+// 이벤트 렌더링
+// ════════════════════════════════════════════
+function buildEventHtml(events, today){
+  const rows=events.map(ev=>{
+    const evDate=ev.event_date?new Date(ev.event_date):null;
+    evDate&&evDate.setHours(0,0,0,0);
+    let urgency='normal', cls='ev-normal', dateCls='normal';
+    if(ev.is_completed){ cls='ev-done'; dateCls='done'; }
+    else if(evDate){
+      const diff=Math.ceil((evDate-today)/(1000*60*60*24));
+      if(diff<0){ urgency='overdue'; cls='ev-urgent'; dateCls='urgent'; }
+      else if(diff<=3){ urgency='urgent'; cls='ev-urgent'; dateCls='urgent'; }
+      else if(diff<=7){ urgency='soon'; cls='ev-soon'; dateCls='soon'; }
+    }
+    const dateStr=ev.event_date||'날짜 미정';
+    let diffLabel='';
+    if(!ev.is_completed&&evDate){
+      const diff=Math.ceil((evDate-today)/(1000*60*60*24));
+      diffLabel=diff<0?` (${Math.abs(diff)}일 초과)`:diff===0?' (오늘!)':` (D-${diff})`;
+    }
+    const siteLabel=ev.site_name?`<span style="font-size:10px;color:var(--text-dim);background:rgba(255,255,255,0.07);border-radius:3px;padding:1px 5px;margin-left:4px">${ev.site_name}</span>`:'';
+    return `<div class="ev-item ${cls}" data-ev-id="${ev.id}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="display:flex;align-items:flex-start;gap:7px;flex:1">
+          <span class="drag-handle ev-drag" style="cursor:grab;color:var(--text-dim);user-select:none;padding-top:1px;touch-action:none">☰</span>
+          <div style="flex:1">
+            <div class="ev-title">${ev.title}${siteLabel}</div>
+            ${ev.detail?`<div class="ev-detail">${ev.detail}</div>`:''}
+            <div class="ev-date ${dateCls}">${ev.is_completed?'✓ 완료: '+(ev.completed_at||''):'📅 '+dateStr+diffLabel}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;margin-left:8px;flex-shrink:0">
+          ${ev.is_completed
+            ?`<button class="btn bs bsm" onclick="revertEvent(${ev.id})" style="font-size:11px;padding:4px 8px">↩</button>`
+            :`<button class="btn bg bsm" onclick="completeEvent(${ev.id})" style="font-size:11px;padding:4px 8px">완료</button>`}
+          <button class="btn bs bsm" onclick="openEditEvent(${ev.id})" style="padding:4px 8px;font-size:11px">✏️</button>
+          <button class="btn bd bsm" onclick="deleteEvent(${ev.id})" style="padding:4px 8px;font-size:11px">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin:0">📌 이벤트</div>
+      <button class="btn bp bsm" onclick="openAddEvent()">＋ 추가</button>
+    </div>
+    ${events.length===0
+      ?'<div class="empty"><div class="empty-icon">📭</div>이벤트를 추가해보세요</div>'
+      :`<div id="event-list-sortable">${rows}</div>`}
+  </div>`;
+}
+
+// ── 이벤트 CRUD ──
+function openAddEvent(){
+  document.getElementById('event-modal-title').textContent='＋ 이벤트 추가';
+  document.getElementById('ev-edit-id').value='';
+  document.getElementById('ev-title').value='';
+  document.getElementById('ev-detail').value='';
+  document.getElementById('ev-date').value='';
+  const sel=document.getElementById('ev-site');
+  sel.innerHTML='<option value="">전체/공통</option>'+sites.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  if(currentSiteId){ const si=sites.find(s=>s.id===currentSiteId); if(si) sel.value=si.name; }
+  document.getElementById('event-modal').classList.add('open');
+}
+function openEditEvent(id){
+  const ev=(window._cachedEvents||[]).find(e=>e.id===id); if(!ev) return;
+  document.getElementById('event-modal-title').textContent='✏️ 이벤트 수정';
+  document.getElementById('ev-edit-id').value=id;
+  document.getElementById('ev-title').value=ev.title||'';
+  document.getElementById('ev-detail').value=ev.detail||'';
+  document.getElementById('ev-date').value=ev.event_date||'';
+  const sel=document.getElementById('ev-site');
+  sel.innerHTML='<option value="">전체/공통</option>'+sites.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  if(ev.site_name) sel.value=ev.site_name;
+  document.getElementById('event-modal').classList.add('open');
+}
+async function saveEvent(){
+  const title=document.getElementById('ev-title').value.trim();
+  if(!title){ toast('이벤트 제목을 입력하세요','err'); return; }
+  const payload={
+    title,
+    detail:document.getElementById('ev-detail').value.trim()||null,
+    event_date:document.getElementById('ev-date').value||null,
+    site_name:document.getElementById('ev-site').value||null,
+  };
+  const editId=document.getElementById('ev-edit-id').value;
+  const{error}=editId
+    ? await sbClient.from('events').update(payload).eq('id',editId)
+    : await sbClient.from('events').insert(payload);
+  if(error){ toast('저장 실패: '+error.message,'err'); return; }
+  document.getElementById('event-modal').classList.remove('open');
+  toast(editId?'이벤트 수정됨 ✓':'이벤트 추가됨 ✓','ok');
+  loadDashboard();
+}
+async function deleteEvent(id){
+  if(!confirm('이벤트를 삭제할까요?')) return;
+  await sbClient.from('events').delete().eq('id',id);
+  toast('삭제됨','ok'); loadDashboard();
+}
+async function completeEvent(id){
+  const today=new Date().toISOString().split('T')[0];
+  await sbClient.from('events').update({is_completed:true,completed_at:today}).eq('id',id);
+  toast('완료 처리됨 ✓','ok'); loadDashboard();
+}
+async function revertEvent(id){
+  await sbClient.from('events').update({is_completed:false,completed_at:null}).eq('id',id);
+  toast('예정으로 되돌림 ✓','ok'); loadDashboard();
+}
+function cacheEvents(evs){ window._cachedEvents=evs; }
+
+// ════════════════════════════════════════════
+// 달력
+// ════════════════════════════════════════════
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+
+function buildCalendarHtml(allLogs, allEvents, allSites){
+  // 캐시
+  window._cachedEvents=allEvents;
+  cacheEvents(allEvents);
+
+  const today=new Date(); today.setHours(0,0,0,0);
+  const y=calYear, m=calMonth;
+  const firstDay=new Date(y,m,1).getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const prevDays=new Date(y,m,0).getDate();
+
+  // 날짜별 작업일지 집계 (공사명 + 대분류 + M/D)
+  const logMap={};
+  allLogs.forEach(l=>{
+    if(!logMap[l.work_date]) logMap[l.work_date]=[];
+    logMap[l.work_date].push(l);
+  });
+
+  // 이벤트 날짜 맵
+  const evMap={};
+  allEvents.forEach(e=>{
+    if(e.event_date){
+      if(!evMap[e.event_date]) evMap[e.event_date]=[];
+      evMap[e.event_date].push(e);
+    }
+  });
+
+  // 공사 기간 계산 (착공~준공예정)
+  const siteRanges=allSites.filter(s=>s.start_date).map(s=>({
+    name:s.name, start:s.start_date, end:s.end_date||s.start_date,
+    color:'#2eb85c'
+  }));
+
+  const dowLabels=['일','월','화','수','목','금','토'];
+  const dowHtml=dowLabels.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+  let cells='';
+  // 이전달 빈칸
+  for(let i=0;i<firstDay;i++){
+    const d=prevDays-firstDay+1+i;
+    cells+=`<div class="cal-day other-month"><div class="cal-day-num">${d}</div></div>`;
+  }
+  // 이번달
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=new Date(y,m,d).getTime()===today.getTime();
+    const dayLogs=logMap[dateStr]||[];
+    const dayEvs=evMap[dateStr]||[];
+
+    // 공사 진행바
+    let siteBars='';
+    siteRanges.forEach(sr=>{
+      if(dateStr>=sr.start&&dateStr<=sr.end){
+        const isStart=dateStr===sr.start;
+        const isEnd=dateStr===sr.end;
+        siteBars+=`<div class="cal-event-dot ${isStart?'site-start':isEnd?'site-end':'site-bar'}" title="${sr.name}">${isStart?'▶ '+sr.name.slice(0,6):isEnd?'■ 준공':'─'}</div>`;
+      }
+    });
+
+    // 작업일지 도트 (공사명 + 대분류 + M/D)
+    let logDots='';
+    if(dayLogs.length){
+      // 대분류별 집계
+      const catMd={};
+      dayLogs.forEach(l=>{
+        if(!catMd[l.category]) catMd[l.category]=0;
+        catMd[l.category]+=parseFloat(l.manday||0);
+      });
+      const siteName=dayLogs[0].site_name||'';
+      const totalDayMd=Object.values(catMd).reduce((s,v)=>s+v,0);
+      const cats=Object.keys(catMd).slice(0,2).join(', ');
+      logDots=`<div class="cal-event-dot work" title="${siteName} ${cats} ${totalDayMd.toFixed(1)}M/D">${siteName?siteName.slice(0,4)+' ':''}<span style="color:var(--sun)">${totalDayMd.toFixed(1)}</span></div>`;
+    }
+
+    // 이벤트 도트
+    let evDots=dayEvs.slice(0,2).map(e=>
+      `<div class="cal-event-dot ev" title="${e.title}">${e.is_completed?'✓ ':''  }${e.title.slice(0,6)}</div>`
+    ).join('');
+
+    cells+=`<div class="cal-day${isToday?' today':''}">
+      <div class="cal-day-num">${d}</div>
+      ${siteBars}${logDots}${evDots}
+    </div>`;
+  }
+  // 다음달 빈칸
+  const total=firstDay+daysInMonth;
+  const remaining=(7-total%7)%7;
+  for(let i=1;i<=remaining;i++){
+    cells+=`<div class="cal-day other-month"><div class="cal-day-num">${i}</div></div>`;
+  }
+
+  const monthNames=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  return `<div class="cal-wrap">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="calPrev()">◀</button>
+      <div class="cal-title">${y}년 ${monthNames[m]}</div>
+      <button class="cal-nav" onclick="calNext()">▶</button>
+    </div>
+    <div class="cal-grid">${dowHtml}${cells}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:11px;color:var(--text-dim)">
+      <span style="display:flex;align-items:center;gap:3px"><span class="cal-event-dot work" style="display:inline-block;padding:1px 5px">작업일지</span></span>
+      <span style="display:flex;align-items:center;gap:3px"><span class="cal-event-dot ev" style="display:inline-block;padding:1px 5px">이벤트</span></span>
+      <span style="display:flex;align-items:center;gap:3px"><span class="cal-event-dot site-bar" style="display:inline-block;padding:1px 5px">공사기간</span></span>
+    </div>
+  </div>`;
+}
+
+function calPrev(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} loadDashboard(); }
+function calNext(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} loadDashboard(); }
 
 function buildPlanHtml(sitePlans, actualByCategory){
   let inner = '';
@@ -1850,31 +2137,7 @@ function renderSiteList(){
   el.innerHTML=sites.map(s=>{
     const isSel=s.id===currentSiteId||s.id==currentSiteId;
     const sn=s.name.replace(/'/g,"\\'");
-    const infoRows=[
-      {label:'공사명',   val:s.name||''},
-      {label:'발주처',   val:s.client||''},
-      {label:'시공사',   val:s.contractor||''},
-      {label:'공사위치', val:s.location||''},
-      {label:'착공일',   val:s.start_date||''},
-      {label:'준공예정', val:s.end_date||''},
-    ];
-    const copyTable=isSel?`
-      <div style="margin-top:12px;background:var(--surface);border-radius:8px;overflow:hidden;border:1px solid var(--border)">
-        <div style="padding:8px 12px;background:rgba(245,166,35,0.1);font-size:11px;font-weight:700;color:var(--sun);border-bottom:1px solid var(--border)">
-          📋 엑셀 템플릿 현장정보 복사 — 각 항목 복사 후 해당 셀에 붙여넣기
-        </div>
-        ${infoRows.map(r=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">
-            <div style="display:flex;align-items:center;gap:10px;flex:1">
-              <span style="font-size:11px;color:var(--text-dim);min-width:58px">${r.label}</span>
-              <span style="font-size:13px;color:var(--text)">${r.val||'<span style="color:var(--text-dim);font-size:11px">미입력</span>'}</span>
-            </div>
-            ${r.val?`<button class="btn bs bsm" style="font-size:11px;padding:5px 10px;flex-shrink:0" onclick="copyVal(this,'${r.val.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}','${r.label}')">📋 복사</button>`:''}
-          </div>`).join('')}
-        <div style="padding:10px 12px">
-          <button class="btn bp bfull bsm" onclick="copyAllSiteInfo(${s.id})" style="font-size:12px">📋 전체 복사 (탭 구분 — 엑셀 C4에 붙여넣기)</button>
-        </div>
-      </div>`:'';
+    const copyTable='';
     return `<div class="site-item ${isSel?'active':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
@@ -1887,7 +2150,7 @@ function renderSiteList(){
           <button class="btn bd bsm" onclick="deleteSite(${s.id})">삭제</button>
         </div>
       </div>
-      ${copyTable}
+
     </div>`;
   }).join('');
 }
@@ -1930,9 +2193,16 @@ function selectSite(id,name){
 async function addSite(){
   const name=document.getElementById('new-site-name').value.trim();
   if(!name){ toast('현장명을 입력하세요','err'); return; }
-  const{error}=await sbClient.from('sites').insert({name,client:document.getElementById('new-site-client').value.trim(),contractor:document.getElementById('new-site-contractor').value.trim(),start_date:document.getElementById('new-site-start').value||null,end_date:document.getElementById('new-site-end').value||null});
-  if(error){ toast('추가 실패','err'); return; }
-  ['new-site-name','new-site-client','new-site-contractor','new-site-start','new-site-end'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const{error}=await sbClient.from('sites').insert({
+    name,
+    client:document.getElementById('new-site-client').value.trim(),
+    contractor:document.getElementById('new-site-contractor').value.trim(),
+    location:document.getElementById('new-site-location')?.value.trim()||null,
+    start_date:document.getElementById('new-site-start').value||null,
+    end_date:document.getElementById('new-site-end').value||null
+  });
+  if(error){ toast('추가 실패: '+error.message,'err'); return; }
+  ['new-site-name','new-site-client','new-site-contractor','new-site-location','new-site-start','new-site-end'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   await loadSites(); toast('현장 추가됨 ✓','ok');
 }
 async function deleteSite(id){
