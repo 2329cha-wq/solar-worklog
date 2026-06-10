@@ -504,6 +504,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
     </div>
     <div id="done-site-list"></div>
   </div>
+</div>
 
 <!-- ══ 모달들 ══ -->
 
@@ -890,7 +891,7 @@ async function loadDashboard(){
     Sortable.create(plist,{handle:'.plan-drag',animation:150,
       onEnd:async()=>{
         const items=[...plist.querySelectorAll('[data-plan-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id')))));
+        await Promise.all(items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id'))))));
       }
     });
   }
@@ -899,7 +900,7 @@ async function loadDashboard(){
     Sortable.create(evlist,{handle:'.ev-drag',animation:150,
       onEnd:async()=>{
         const items=[...evlist.querySelectorAll('[data-ev-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-ev-id')))));
+        await Promise.all(items.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id'))))));
       }
     });
   }
@@ -1032,7 +1033,7 @@ async function loadDashboard(){
       handle:'.plan-drag',animation:150,
       onEnd:async()=>{
         const items=[...plist.querySelectorAll('[data-plan-id]')];
-        const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id'))));
+        const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id')))));
         await Promise.all(updates);
       }
     });
@@ -1131,7 +1132,7 @@ async function savePlanAll(){
     const{error}=await sbClient.from('work_plans').update({
       site_name:siteName, category:cat, planned_manday:md,
       note:document.getElementById(`prn-${rid}`)?.value||''
-    }).eq('id',editId);
+    }).eq('id',Number(editId));
     if(error){ toast('수정 실패','err'); return; }
     toast('계획 수정됨 ✓','ok');
   } else {
@@ -1157,7 +1158,7 @@ async function savePlanAll(){
 
 async function deletePlan(id){
   if(!confirm('계획을 삭제할까요?')) return;
-  await sbClient.from('work_plans').delete().eq('id',id);
+  await sbClient.from('work_plans').delete().eq('id',Number(id));
   toast('삭제됨','ok'); loadDashboard();
 }
 
@@ -1165,7 +1166,7 @@ async function revertPlan(id){
   if(!confirm('완료를 취소하고 작업중으로 되돌릴까요?')) return;
   const{error}=await sbClient.from('work_plans').update({
     is_completed:false, completed_at:null
-  }).eq('id',id);
+  }).eq('id',Number(id));
   if(error){ toast('변경 실패: '+error.message,'err'); return; }
   toast('작업중으로 변경됨 ✓','ok'); loadDashboard();
 }
@@ -1209,7 +1210,7 @@ async function loadCalendarTab(){
     if(window.Sortable) Sortable.create(evlist,{handle:'.ev-drag',animation:150,
       onEnd:async()=>{
         const allItems=[...document.querySelectorAll('[data-ev-id]')];
-        await Promise.all(allItems.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-ev-id')))));
+        await Promise.all(allItems.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id'))))));
       }
     });
   });
@@ -1463,7 +1464,7 @@ async function saveEvent(){
   };
   const editId=document.getElementById('ev-edit-id').value;
   const{error}=editId
-    ? await sbClient.from('events').update(payload).eq('id',editId)
+    ? await sbClient.from('events').update(payload).eq('id',Number(editId))
     : await sbClient.from('events').insert(payload);
   if(error){ toast('저장 실패: '+error.message,'err'); return; }
   document.getElementById('event-modal').classList.remove('open');
@@ -1472,16 +1473,16 @@ async function saveEvent(){
 }
 async function deleteEvent(id){
   if(!confirm('이벤트를 삭제할까요?')) return;
-  await sbClient.from('events').delete().eq('id',id);
+  await sbClient.from('events').delete().eq('id',Number(id));
   toast('삭제됨','ok'); loadCalendarTab();
 }
 async function completeEvent(id){
   const today=new Date().toISOString().split('T')[0];
-  await sbClient.from('events').update({is_completed:true,completed_at:today}).eq('id',id);
+  await sbClient.from('events').update({is_completed:true,completed_at:today}).eq('id',Number(id));
   toast('완료 처리됨 ✓','ok'); loadCalendarTab();
 }
 async function revertEvent(id){
-  await sbClient.from('events').update({is_completed:false,completed_at:null}).eq('id',id);
+  await sbClient.from('events').update({is_completed:false,completed_at:null}).eq('id',Number(id));
   toast('예정으로 되돌림 ✓','ok'); loadCalendarTab();
 }
 
@@ -1567,10 +1568,10 @@ async function saveComplete(){
   const plist=document.getElementById('plan-list-sortable');
   if(plist){
     const items=[...plist.querySelectorAll('[data-plan-id]')];
-    const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id'))));
+    const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id')))));
     await Promise.all(updates);
   }
-  const{error}=await sbClient.from('work_plans').update({is_completed:true, completed_at:today}).eq('id',planId);
+  const{error}=await sbClient.from('work_plans').update({is_completed:true, completed_at:today}).eq('id',Number(planId));
   if(error){ toast('오류 발생','err'); return; }
   document.getElementById('complete-modal').classList.remove('open');
   toast('완료 처리됨 ✓ ('+today+')','ok'); loadDashboard();
@@ -2121,7 +2122,7 @@ function syncAllSubHours(){
 
 async function openEditLog(id){
   // 클릭한 레코드 기준으로 같은 날짜 전체 레코드 불러오기
-  const{data:clicked}=await sbClient.from('daily_logs').select('work_date,site_name').eq('id',id).single();
+  const{data:clicked}=await sbClient.from('daily_logs').select('work_date,site_name').eq('id',Number(id)).single();
   if(!clicked) return;
   const{data:allLogs}=await sbClient.from('daily_logs')
     .select('*,photos(*)')
@@ -2195,7 +2196,7 @@ async function openEditLog(id){
 
 
 async function deleteExistingPhoto(photoId, el, key){
-  const{error}=await sbClient.from('photos').delete().eq('id',photoId);
+  const{error}=await sbClient.from('photos').delete().eq('id',Number(photoId));
   if(error){ toast('사진 삭제 실패','err'); return; }
   el?.remove();
   if(key&&window._editExistingPhotos&&window._editExistingPhotos[key]){
@@ -2248,7 +2249,7 @@ async function saveLog(){
   if(editId && editId.startsWith('SUB:')){
     // 소분류 단건 수정
     const subId=editId.replace('SUB:','');
-    const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',subId);
+    const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',Number(subId));
     if(error){ toast('수정 실패: '+error.message,'err'); return; }
     for(const pm of photoMap){ if(pm.pIdx===0) await uploadCatPhotos(subId,pm.cid); }
   } else if(editId && editId.startsWith('DATE:')){
@@ -2296,7 +2297,7 @@ async function saveLog(){
 
 async function deleteLog(id){
   if(!confirm('삭제할까요?')) return;
-  await sbClient.from('daily_logs').delete().eq('id',id);
+  await sbClient.from('daily_logs').delete().eq('id',Number(id));
   toast('삭제됨','ok'); initDateFilters().then(()=>{ loadLogs(); loadDashboard(); loadSummary(); });
 }
 
@@ -2444,7 +2445,7 @@ function renderWorkTypeList(){
       const ups=[];
       cards.forEach((c,i)=>{
         const cat=c.getAttribute('data-cat');
-        workTypes.filter(w=>w.category===cat).forEach(w=>ups.push(sbClient.from('work_types').update({sort_order:i*100+w.sort_order%100}).eq('id',w.id)));
+        workTypes.filter(w=>w.category===cat).forEach(w=>ups.push(sbClient.from('work_types').update({sort_order:i*100+w.sort_order%100}).eq('id',Number(w.id))));
       });
       await Promise.all(ups); await loadWorkTypes();
     }});
@@ -2453,7 +2454,7 @@ function renderWorkTypeList(){
         const items=[...sl.querySelectorAll('[data-id]')];
         const cat=sl.getAttribute('data-cat');
         const base=Math.floor((workTypes.find(w=>w.category===cat)?.sort_order||0)/100)*100;
-        const ups=items.map((item,i)=>sbClient.from('work_types').update({sort_order:base+i+1}).eq('id',parseInt(item.getAttribute('data-id'))));
+        const ups=items.map((item,i)=>sbClient.from('work_types').update({sort_order:base+i+1}).eq('id',Number(item.getAttribute('data-id')))));
         await Promise.all(ups); await loadWorkTypes();
       }});
     });
@@ -2483,7 +2484,7 @@ async function addSubCategory(){
   document.getElementById('sub-modal').classList.remove('open');
   await loadWorkTypes(); toast('소분류 추가됨 ✓','ok');
 }
-async function deleteWorkType(id){ if(!confirm('삭제할까요?')) return; await sbClient.from('work_types').delete().eq('id',id); await loadWorkTypes(); toast('삭제됨','ok'); }
+async function deleteWorkType(id){ if(!confirm('삭제할까요?')) return; await sbClient.from('work_types').delete().eq('id',Number(id)); await loadWorkTypes(); toast('삭제됨','ok'); }
 async function deleteCategory(cat){ if(!confirm(`'${cat}' 전체를 삭제할까요?`)) return; await sbClient.from('work_types').delete().eq('category',cat); await loadWorkTypes(); toast('삭제됨','ok'); }
 function openEditCat(cat){ document.getElementById('en-id').value=''; document.getElementById('en-type').value='cat'; document.getElementById('en-old').value=cat; document.getElementById('en-val').value=cat; document.getElementById('edit-name-modal').classList.add('open'); setTimeout(()=>document.getElementById('en-val').focus(),100); }
 function openEditSub(id,name){ document.getElementById('en-id').value=id; document.getElementById('en-type').value='sub'; document.getElementById('en-old').value=name; document.getElementById('en-val').value=name; document.getElementById('edit-name-modal').classList.add('open'); setTimeout(()=>document.getElementById('en-val').focus(),100); }
@@ -2492,7 +2493,7 @@ async function saveNameEdit(){
   const oldV=document.getElementById('en-old').value, newV=document.getElementById('en-val').value.trim();
   if(!newV){ toast('이름을 입력하세요','err'); return; }
   if(type==='cat') await sbClient.from('work_types').update({category:newV}).eq('category',oldV);
-  else await sbClient.from('work_types').update({sub_category:newV}).eq('id',id);
+  else await sbClient.from('work_types').update({sub_category:newV}).eq('id',Number(id));
   document.getElementById('edit-name-modal').classList.remove('open');
   await loadWorkTypes(); toast('수정됨 ✓','ok');
 }
@@ -2631,7 +2632,7 @@ async function addSite(){
 async function deleteSite(id){
   if(!confirm('현장을 삭제할까요?')) return;
   if(Number(id)===Number(currentSiteId)){ currentSiteId=null; localStorage.removeItem('sel_site_id'); localStorage.removeItem('sel_site_name'); updateHeaderSite(null); }
-  await sbClient.from('sites').delete().eq('id', Number(id));
+  await sbClient.from('sites').delete().eq('id',Number( Number(id)));
   await loadSites(); toast('삭제됨','ok');
 }
 function openEditSite(id){
@@ -2658,7 +2659,7 @@ async function saveEditSite(){
     start_date:document.getElementById('es-start').value||null,
     end_date:document.getElementById('es-end').value||null,
     is_completed:s.is_completed||false
-  }).eq('id', Number(id));
+  }).eq('id',Number( Number(id)));
   if(error){ toast('수정 실패: '+error.message,'err'); return; }
   if(Number(id)===Number(currentSiteId)){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
   document.getElementById('edit-site-modal').classList.remove('open');
@@ -2667,14 +2668,14 @@ async function saveEditSite(){
 async function completeSite(id){
   const s=sites.find(x=>x.id==id); if(!s) return;
   if(!confirm(`'${s.name}'\n공사완료 처리하시겠습니까?\n\n완료된 현장은 달력에서 표시되지 않습니다.`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id', Number(s.id));
+  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id',Number( Number(s.id)));
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
   await loadSites(); toast(s.name+' 공사완료 처리됨 ✓','ok');
 }
 async function revertSite(id){
   const s=sites.find(x=>x.id==id); if(!s) return;
   if(!confirm(`'${s.name}'\n작업중으로 되돌리시겠습니까?`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id', Number(s.id));
+  const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id',Number( Number(s.id)));
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
   await loadSites(); toast(s.name+' 진행중으로 변경됨 ✓','ok');
 }
@@ -2974,7 +2975,7 @@ function closePhotoViewer(){
 // 사진 내보내기 (zip 없이 순차 다운로드)
 // 소분류 단건 수정 모달
 async function openEditSubLog(id){
-  const{data:l}=await sbClient.from('daily_logs').select('*').eq('id',id).single();
+  const{data:l}=await sbClient.from('daily_logs').select('*').eq('id',Number(id)).single();
   if(!l) return;
   document.getElementById('log-modal-title').textContent='✏️ 소분류 수정';
   document.getElementById('log-edit-group').value='SUB:'+id;
