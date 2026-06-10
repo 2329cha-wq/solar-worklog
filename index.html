@@ -175,7 +175,6 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 #photo-viewer-modal{cursor:zoom-out}
 /* PC 폰트 확대 */
 @media(min-width:768px){
-@media(min-width:768px){
   body{font-size:17px}
   .app-title{font-size:18px}
   .header-site{font-size:14px}
@@ -368,44 +367,30 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
 .site-drag-handle{cursor:grab;color:var(--text-dim);user-select:none;padding:0 6px;font-size:15px;touch-action:none}
 
-/* ── 모바일 달력 전용 스타일 (max-width:767px) ── */
+/* ── 모바일 달력 전용 스타일 ── */
 @media(max-width:767px){
-  /* 달력 래퍼 여백 축소 */
-  .cal-wrap{padding:8px 6px}
-  .cal-header{margin-bottom:8px}
+  .cal-wrap{padding:7px 5px}
+  .cal-header{margin-bottom:7px}
   .cal-title{font-size:13px}
-  .cal-nav{padding:3px 8px;font-size:11px}
-  .cal-refresh{padding:3px 8px;font-size:10px}
-
-  /* 그리드 간격 최소화 */
+  .cal-nav{padding:3px 7px;font-size:11px}
+  .cal-refresh{padding:3px 7px;font-size:10px}
   .cal-grid{gap:1px}
   .cal-dow{font-size:10px;padding:3px 0}
-
-  /* 셀 높이를 화면에 맞게 */
+  /* 셀 높이: 7칸 × 화면폭으로 자동 계산 */
   .cal-day{
     min-height:0;
-    height:calc((100vw - 44px) / 7 * 1.35);  /* 7칸, 여백 제외, 비율 조정 */
+    aspect-ratio:1 / 1.3;
     padding:2px 2px;
-    border-radius:3px;
-    overflow:hidden;
-  }
-  .cal-day-num{font-size:10px;font-weight:700;margin-bottom:1px;line-height:1}
-  .cal-day.today .cal-day-num{font-size:11px}
-
-  /* 달력 내 dot: 텍스트 더 짧게, 폰트 더 작게 */
-  .cal-dot{
-    font-size:7px;
-    padding:0px 2px;
-    margin-bottom:1px;
-    line-height:1.5;
     border-radius:2px;
+    overflow:hidden;
+    font-size:9px;
   }
-
-  /* 범례 작게 */
-  .cal-legend{gap:5px;margin-top:8px;padding-top:7px}
-  .cal-legend-item{font-size:10px}
-
-  /* 날짜 팝업 모바일 최적화 */
+  .cal-day-num{font-size:10px;margin-bottom:1px;line-height:1}
+  .cal-day.today .cal-day-num{font-size:11px}
+  .cal-dot{font-size:7px;padding:0 2px;margin-bottom:1px;line-height:1.45;border-radius:2px}
+  .cal-legend{gap:4px;margin-top:7px;padding-top:6px}
+  .cal-legend-item{font-size:9px}
+  /* 날짜 팝업 */
   .day-popup-overlay{padding:8px}
   .day-popup{padding:14px 12px;max-height:88vh}
   .day-popup-title{font-size:14px;margin-bottom:10px}
@@ -1281,10 +1266,9 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
       if(ds>=sr.start&&ds<=sr.end){
         const isS=ds===sr.start,isE=ds===sr.end;
         if(isS||isE){
-          const nameLen=isMobile?3:5;
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px;filter:brightness(1.4);box-shadow:0 0 4px rgba(255,255,255,0.2)">${isS?'▶'+sr.name.slice(0,nameLen):'■종'}</span>`;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px;filter:brightness(1.4);box-shadow:0 0 4px rgba(255,255,255,0.2)">${isS?'▶'+sr.name.slice(0,isMobile?3:5):(isMobile?'■종':'■종료')}</span>`;
         } else {
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 2px;opacity:0.65">─</span>`;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 ${isMobile?1:3}px;opacity:0.65">─</span>`;
         }
       }
     });
@@ -1292,14 +1276,11 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
     if(dayLogs.length){
       const total=dayLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
       const sn=dayLogs[0].site_name||'';
-      const snSlice=isMobile?2:4;
-      logDot=`<span class="cal-dot work">${sn?sn.slice(0,snSlice)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
+      logDot=`<span class="cal-dot work">${sn?sn.slice(0,isMobile?2:4)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
     }
-    const evDotMax=isMobile?1:2;
-    const evTitleLen=isMobile?4:6;
-    const evDots=dayEvs.slice(0,evDotMax).map(e=>{
+    const evDots=dayEvs.slice(0,isMobile?1:2).map(e=>{
       const ec=siteEvClsMap[e.site_name]||'ev-dot';
-      return `<span class="cal-dot ${ec}${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''}${e.title}">${e.title.slice(0,evTitleLen)}</span>`;
+      return `<span class="cal-dot ${ec}${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''}${e.title}">${e.title.slice(0,isMobile?3:6)}</span>`;
     }).join('');
     const hasWork=dayLogs.length?'has-work':'';
     cells+=`<div class="cal-day${isToday?' today':''} ${hasWork}" onclick="openDayPopup('${ds}')">`
@@ -2188,18 +2169,21 @@ async function openEditLog(id){
     addCatBlock({category:cat, subs});
   });
 
-  // 각 대분류 카드에 기존 사진 표시
+  // 각 대분류 카드에 기존 사진 표시 + 기존 photo ID 저장 (수정 시 보존용)
+  window._editExistingPhotos={};
   setTimeout(()=>{
     catOrder.forEach((cat,ci)=>{
-      const cid=ci+1; // catBlockCount는 addCatBlock 호출 순서
+      const cid=ci+1;
       const recs=catMap[cat];
       const allPhotos=recs.flatMap(l=>l.photos||[]);
       const pgEl=document.getElementById('cbpg-'+cid);
       if(!pgEl||!allPhotos.length) return;
+      // 기존 photo id 목록 저장
+      window._editExistingPhotos['cat-'+cid]=allPhotos.map(p=>p.id);
       allPhotos.forEach(p=>{
         const div=document.createElement('div'); div.className='photo-item';
         div.innerHTML='<img src="'+p.url+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px">'
-          +'<button class="photo-rm" onclick="deleteExistingPhoto('+p.id+',this.parentNode)">✕</button>';
+          +'<button class="photo-rm" onclick="deleteExistingPhoto('+p.id+',this.parentNode,\'cat-'+cid+'\')">✕</button>';
         pgEl.appendChild(div);
       });
     });
@@ -2213,14 +2197,18 @@ async function openEditLog(id){
 }
 
 
-async function deleteExistingPhoto(photoId, el){
+async function deleteExistingPhoto(photoId, el, key){
   const{error}=await sbClient.from('photos').delete().eq('id',photoId);
   if(error){ toast('사진 삭제 실패','err'); return; }
   el?.remove();
+  // 기존 사진 목록에서도 제거
+  if(key&&window._editExistingPhotos&&window._editExistingPhotos[key]){
+    window._editExistingPhotos[key]=window._editExistingPhotos[key].filter(id=>id!==photoId);
+  }
   toast('사진 삭제됨','ok');
 }
 
-function closeLogModal(){ document.getElementById('log-modal').classList.remove('open'); }
+function closeLogModal(){ document.getElementById('log-modal').classList.remove('open'); window._editExistingPhotos={}; }
 
 async function saveLog(){
   const date=document.getElementById('log-date').value;
@@ -2268,17 +2256,36 @@ async function saveLog(){
     if(error){ toast('수정 실패: '+error.message,'err'); return; }
     for(const pm of photoMap){ if(pm.pIdx===0) await uploadCatPhotos(subId,pm.cid); }
   } else if(editId && editId.startsWith('DATE:')){
-    // 날짜 전체 수정: 삭제 후 재삽입
+    // 날짜 전체 수정: 기존 사진 보존을 위해 photo log_id를 임시 null로 분리 후 재연결
     const editDate=editId.replace('DATE:','');
+    // 1) 기존 사진들 log_id 임시 해제 (cascade 삭제 방지)
+    const existingPhotoMap=window._editExistingPhotos||{};
+    const allExistingPhotoIds=Object.values(existingPhotoMap).flat();
+    if(allExistingPhotoIds.length){
+      await sbClient.from('photos').update({log_id:null}).in('id',allExistingPhotoIds);
+    }
+    // 2) 기존 daily_logs 삭제
     const{error:delErr}=await sbClient.from('daily_logs').delete().eq('work_date',editDate);
     if(delErr){ toast('수정 실패: '+delErr.message,'err'); return; }
+    // 3) 새 레코드 삽입
     const insertedIds=[];
     for(let i=0;i<payloads.length;i++){
       const{data,error}=await sbClient.from('daily_logs').insert(payloads[i]).select().single();
       if(error){ toast('저장 실패: '+error.message,'err'); return; }
       insertedIds.push(data.id);
     }
-    for(const pm of photoMap){ await uploadCatPhotos(insertedIds[pm.pIdx],pm.cid); }
+    // 4) 대분류별 기존 사진을 새 log_id(첫 소분류)로 재연결
+    for(const pm of photoMap){
+      const key='cat-'+pm.cid;
+      const existingIds=existingPhotoMap[key]||[];
+      const newLogId=insertedIds[pm.pIdx];
+      if(existingIds.length&&newLogId){
+        await sbClient.from('photos').update({log_id:newLogId}).in('id',existingIds);
+      }
+      // 새로 추가한 사진도 업로드
+      await uploadCatPhotos(newLogId,pm.cid);
+    }
+    window._editExistingPhotos={};
   } else {
     const insertedIds=[];
     for(let i=0;i<payloads.length;i++){
