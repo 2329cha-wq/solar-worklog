@@ -1251,10 +1251,10 @@ function addMatRow(sid, data){
     +'<input type="number" class="fi" id="mrv-'+mid+'" step="0.01" placeholder="수량" style="flex:1;min-width:0;max-width:80px" value="'+qty+'">'
     +'<div style="position:relative;flex-shrink:0">'
       +'<input type="text" class="fi" id="mru-'+mid+'" placeholder="단위▼" style="width:70px;cursor:pointer;text-align:center;caret-color:transparent" readonly'
-        +' value="'+unit+'" onclick="toggleUnitPicker('mru-'+mid+'')">'
+        +' value="'+unit+'" onclick="toggleUnitPicker(&apos;mru-&apos;+mid+&apos;&apos;)">'
       +'<div id="up-mru-'+mid+'" class="unit-picker" style="display:none"></div>'
     +'</div>'
-    +'<button type="button" class="btn bd bsm" onclick="document.getElementById('mr-'+mid+'').remove()" style="padding:6px 10px;flex-shrink:0">✕</button>';
+    +'<button type="button" class="btn bd bsm" onclick="document.getElementById(&apos;mr-&apos;+mid+&apos;&apos;).remove()" style="padding:6px 10px;flex-shrink:0">✕</button>';
   const container=document.getElementById('mat-rows-'+sid);
   if(container) container.appendChild(div);
 }
@@ -2165,7 +2165,8 @@ async function exportExcel(){
   ws1Data.push([]);
   const totalPlanned=sitePlans.reduce((s,p)=>s+parseFloat(p.planned_manday||0),0);
   const totalActual=sitePlans.reduce((s,p)=>s+parseFloat(p.actual_manday||0||actualByCat[p.category]||0),0);
-  ws1Data.push(['','합계','',totalPlanned.toFixed(2),totalActual.toFixed(2),totalPlanned>0?(totalActual/totalPlanned*100).toFixed(1)+'%','','','']);
+  const planPct=totalPlanned>0?(totalActual/totalPlanned*100).toFixed(1)+'%':'';
+  ws1Data.push(['','합계','',totalPlanned.toFixed(2),totalActual.toFixed(2),planPct,'','','']);
   const ws1=XLSX.utils.aoa_to_sheet(ws1Data);
   ws1['!cols']=[{wch:5},{wch:18},{wch:18},{wch:10},{wch:10},{wch:8},{wch:12},{wch:12},{wch:24}];
   ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
