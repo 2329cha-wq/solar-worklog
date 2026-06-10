@@ -476,6 +476,9 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   </div>
   <div class="card">
     <div class="card-title">🏗️ 현장 관리</div>
+    <div style="display:flex;gap:7px;margin-bottom:12px">
+      <input type="text" class="fi" id="site-search" placeholder="현장명 검색..." oninput="renderSiteList()" style="flex:1">
+    </div>
     <div id="site-list" style="margin-bottom:14px"></div>
     <div class="fg"><label class="fl">현장명 *</label><input type="text" class="fi" id="new-site-name" placeholder="○○ 태양광 발전소 설치공사"></div>
     <div class="fr">
@@ -2498,14 +2501,16 @@ function populateSiteSelects(){
 }
 function renderSiteList(){
   const el=document.getElementById('site-list'); if(!el) return;
+  const q=(document.getElementById('site-search')?.value||'').trim().toLowerCase();
+
   if(!sites.length){ el.innerHTML='<div style="color:var(--text-dim);font-size:13px">등록된 현장이 없습니다</div>'; return; }
 
-  const activeSites=sites.filter(s=>!s.is_completed);
-  const doneSites=sites.filter(s=>s.is_completed);
+  const matched=q ? sites.filter(s=>s.name.toLowerCase().includes(q)) : sites;
+  const activeSites=matched.filter(s=>!s.is_completed);
+  const doneSites=matched.filter(s=>s.is_completed);
 
   function siteCard(s, isDone){
     const isSel=s.id===currentSiteId||s.id==currentSiteId;
-    const sn=s.name.replace(/'/g,"\\'");
     return `<div class="site-item ${isSel?'active':''} ${isDone?'site-done':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
@@ -2517,9 +2522,10 @@ function renderSiteList(){
           <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${[s.client,s.contractor,s.start_date].filter(Boolean).join(' · ')}</div>
         </div>
         <div style="display:flex;gap:4px;margin-left:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-          ${!isSel&&!isDone?`<button class="btn bp bsm" onclick="selectSite(${s.id},'${sn}')">선택</button>`:''}
-          ${!isDone?`<button class="btn bg bsm" onclick="completeSite(${s.id},'${sn}')">✅완료</button>`
-                   :`<button class="btn bs bsm" onclick="revertSite(${s.id},'${sn}')">🔄복구</button>`}
+          ${!isSel&&!isDone?`<button class="btn bp bsm" onclick="selectSite(${s.id})">선택</button>`:''}
+          ${!isDone
+            ?`<button class="btn bg bsm" onclick="completeSite(${s.id})">✅완료</button>`
+            :`<button class="btn bs bsm" onclick="revertSite(${s.id})">🔄복구</button>`}
           <button class="btn bs bsm" onclick="openEditSite(${s.id})">수정</button>
           <button class="btn bd bsm" onclick="deleteSite(${s.id})">삭제</button>
         </div>
@@ -2530,14 +2536,17 @@ function renderSiteList(){
   let html='';
   if(activeSites.length){
     html+=activeSites.map(s=>siteCard(s,false)).join('');
-  } else {
+  } else if(!q){
     html+='<div style="color:var(--text-dim);font-size:12px;padding:8px 0">진행중인 현장이 없습니다</div>';
   }
   if(doneSites.length){
     html+=`<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:8px;letter-spacing:0.5px">✅ 완료 공사</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:8px;letter-spacing:0.5px">✅ 완료 공사 (${doneSites.length}건)</div>
       ${doneSites.map(s=>siteCard(s,true)).join('')}
     </div>`;
+  }
+  if(q&&!matched.length){
+    html='<div style="color:var(--text-dim);font-size:12px;padding:8px 0;text-align:center">검색 결과가 없습니다</div>';
   }
   el.innerHTML=html;
 }
@@ -2568,7 +2577,9 @@ function copyAllSiteInfo(id){
     toast('전체 복사됨 ✓  엑셀 C4에 붙여넣기!','ok');
   });
 }
-function selectSite(id,name){
+function selectSite(id){
+  const s=sites.find(x=>x.id===parseInt(id)||x.id==id); if(!s) return;
+  const name=s.name;
   currentSiteId=parseInt(id);
   localStorage.setItem('sel_site_id',id);
   localStorage.setItem('sel_site_name',name);
@@ -2642,18 +2653,19 @@ async function saveEditSite(){
   document.getElementById('edit-site-modal').classList.remove('open');
   await loadSites(); toast('수정됨 ✓','ok');
 }
-async function completeSite(id, name){
-  if(!confirm(`'${name}'\n공사완료 처리하시겠습니까?\n\n완료된 현장은 달력에서 표시되지 않습니다.`)) return;
-  const today=new Date().toISOString().split('T')[0];
-  const{error}=await sbClient.from('sites').update({is_completed:true, end_date:today}).eq('id',id);
+async function completeSite(id){
+  const s=sites.find(x=>x.id===parseInt(id)||x.id==id); if(!s) return;
+  if(!confirm(`'${s.name}'\n공사완료 처리하시겠습니까?\n\n완료된 현장은 달력에서 표시되지 않습니다.`)) return;
+  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id',id);
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
-  await loadSites(); toast(name+' 공사완료 처리됨 ✓','ok');
+  await loadSites(); toast(s.name+' 공사완료 처리됨 ✓','ok');
 }
-async function revertSite(id, name){
-  if(!confirm(`'${name}'\n작업중으로 되돌리시겠습니까?`)) return;
+async function revertSite(id){
+  const s=sites.find(x=>x.id===parseInt(id)||x.id==id); if(!s) return;
+  if(!confirm(`'${s.name}'\n작업중으로 되돌리시겠습니까?`)) return;
   const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id',id);
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
-  await loadSites(); toast(name+' 진행중으로 변경됨 ✓','ok');
+  await loadSites(); toast(s.name+' 진행중으로 변경됨 ✓','ok');
 }
 
 // ═══════════════════════════════════════════
