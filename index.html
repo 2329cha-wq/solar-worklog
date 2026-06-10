@@ -75,6 +75,10 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .log-tiny-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-dim);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;line-height:1.8}
 .log-tiny-btn:hover{border-color:rgba(245,166,35,0.5);color:var(--sun)}
 .log-photo-count{display:inline-flex;align-items:center;gap:3px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);color:var(--sun);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700}
+.unit-picker{position:absolute;top:100%;left:0;z-index:999;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;display:flex;flex-wrap:wrap;gap:4px;min-width:160px;box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+.unit-chip{background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);color:var(--sun);border-radius:4px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.unit-chip:hover{background:rgba(245,166,35,0.25)}
+.qty-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(126,200,227,0.1);border:1px solid rgba(126,200,227,0.25);color:#7EC8E3;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600;margin-right:4px}
 .log-group-action-row{display:flex;align-items:center;gap:5px;margin-top:6px}
 .log-tiny-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-dim);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;line-height:1.6}
 .log-tiny-btn:hover{border-color:var(--sun);color:var(--sun)}
@@ -949,6 +953,10 @@ async function loadLogs(){
           <div class="log-sub-info">
             <div class="log-sub-name">${l.sub_category}</div>
             ${l.detail?`<div class="log-sub-detail">💬 ${l.detail}</div>`:''}
+            ${(l.qty1_val||l.qty2_val)?`<div style="margin-bottom:5px">
+              ${l.qty1_val?`<span class="qty-badge">📦 ${l.qty1_val}${l.qty1_unit||''}</span>`:''}
+              ${l.qty2_val?`<span class="qty-badge">📦 ${l.qty2_val}${l.qty2_unit||''}</span>`:''}
+            </div>`:''}
             <div class="log-sub-stats">
               <span class="stat-pill workers">👷 ${workers}명</span>
               ${hours>0?`<span class="stat-pill hours">⏱ ${hours}h</span>`:''}
@@ -1142,6 +1150,31 @@ function addSubRow(cid, data={}){
     <div class="fg" style="margin-bottom:8px">
       <textarea class="ft" id="srd-${sid}" style="min-height:48px" placeholder="세부 작업내용">${(data&&data.detail)||''}</textarea>
     </div>
+    <!-- 수량 입력 (선택) -->
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-end">
+      <div style="flex:1">
+        <label class="fl" style="font-size:11px">수량1 (선택)</label>
+        <div style="display:flex;gap:4px">
+          <input type="number" class="fi" id="srq1v-${sid}" step="0.01" placeholder="수량" style="flex:1;min-width:0" value="${(data&&data.qty1_val)||''}">
+          <div style="position:relative;flex-shrink:0">
+            <input type="text" class="fi" id="srq1u-${sid}" placeholder="단위" style="width:70px;cursor:pointer" readonly
+              value="${(data&&data.qty1_unit)||''}" onclick="toggleUnitPicker('srq1u-${sid}')">
+            <div id="up-srq1u-${sid}" class="unit-picker" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <label class="fl" style="font-size:11px">수량2 (선택)</label>
+        <div style="display:flex;gap:4px">
+          <input type="number" class="fi" id="srq2v-${sid}" step="0.01" placeholder="수량" style="flex:1;min-width:0" value="${(data&&data.qty2_val)||''}">
+          <div style="position:relative;flex-shrink:0">
+            <input type="text" class="fi" id="srq2u-${sid}" placeholder="단위" style="width:70px;cursor:pointer" readonly
+              value="${(data&&data.qty2_unit)||''}" onclick="toggleUnitPicker('srq2u-${sid}')">
+            <div id="up-srq2u-${sid}" class="unit-picker" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="fr3">
       <div class="fg"><label class="fl">투입인원</label>
         <input type="number" class="fi" id="srw-${sid}" min="1" placeholder="명" value="${(data&&data.workers)||''}" oninput="calcSrMd(${sid},${cid})">
@@ -1160,6 +1193,35 @@ function removeSubRow(sid,cid){
   document.getElementById(`sr-${sid}`)?.remove();
   updateCbTotal(cid);
 }
+
+const UNITS=['EA','SET','평','M','M²','M³','TON','KG','BOX','식'];
+
+function toggleUnitPicker(inputId){
+  // 다른 피커 전부 닫기
+  document.querySelectorAll('.unit-picker').forEach(p=>{
+    if(p.id!=='up-'+inputId) p.style.display='none';
+  });
+  const picker=document.getElementById('up-'+inputId);
+  if(!picker) return;
+  if(picker.style.display==='flex'){ picker.style.display='none'; return; }
+  // 칩 생성
+  picker.innerHTML=UNITS.map(u=>`<span class="unit-chip" onclick="selectUnit('${inputId}','${u}')">${u}</span>`).join('');
+  picker.style.display='flex';
+}
+
+function selectUnit(inputId, unit){
+  const el=document.getElementById(inputId);
+  if(el) el.value=unit;
+  const picker=document.getElementById('up-'+inputId);
+  if(picker) picker.style.display='none';
+}
+
+// 바깥 클릭 시 피커 닫기
+document.addEventListener('click', e=>{
+  if(!e.target.closest('[id^="srq"]')&&!e.target.closest('.unit-picker')){
+    document.querySelectorAll('.unit-picker').forEach(p=>p.style.display='none');
+  }
+});
 
 function calcSrMd(sid,cid){
   const w=parseFloat(document.getElementById(`srw-${sid}`)?.value)||0;
@@ -1443,9 +1505,15 @@ async function saveLog(){
       if(!sub){ toast(`${cat}: 소분류를 선택하세요`,'err'); return; }
       if(!md){ toast(`${cat} > ${sub}: 인원/시간을 입력하세요`,'err'); return; }
       const pIdx=payloads.length;
+      const qty1v=document.getElementById(`srq1v-${sid}`)?.value||null;
+      const qty1u=document.getElementById(`srq1u-${sid}`)?.value||null;
+      const qty2v=document.getElementById(`srq2v-${sid}`)?.value||null;
+      const qty2u=document.getElementById(`srq2u-${sid}`)?.value||null;
       payloads.push({work_date:date,category:cat,sub_category:sub,
         detail:document.getElementById(`srd-${sid}`)?.value||'',
         manday:md, workers:parseInt(document.getElementById(`srw-${sid}`)?.value)||null,
+        qty1_val:qty1v?parseFloat(qty1v):null, qty1_unit:qty1u||null,
+        qty2_val:qty2v?parseFloat(qty2v):null, qty2_unit:qty2u||null,
         start_time:startTime,end_time:endTime,weather,manager,memo,site_name:siteName});
       if(sr===subRows[0]) photoMap.push({pIdx,cid});
     }
@@ -1822,7 +1890,7 @@ async function openEditSubLog(id){
   if(siteId) sel.value=siteId; else if(currentSiteId) sel.value=currentSiteId;
   const _w=parseFloat(l.workers)||0, _md=parseFloat(l.manday)||0;
   const _h=_w>0?Math.round(_md*8/_w*100)/100:8;
-  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday}]});
+  addCatBlock({category:l.category, subs:[{sub_category:l.sub_category,detail:l.detail||'',workers:l.workers||'',hours:_h,manday:l.manday,qty1_val:l.qty1_val||'',qty1_unit:l.qty1_unit||'',qty2_val:l.qty2_val||'',qty2_unit:l.qty2_unit||''}]});
   ['log-start','log-end'].forEach(elid=>{
     const el=document.getElementById(elid);
     if(el) el.oninput=()=>syncAllSubHours();
