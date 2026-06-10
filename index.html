@@ -1414,6 +1414,8 @@ async function loadLogs(){
   const to=document.getElementById('log-filter-to')?.value;
   if(from) q=q.gte('work_date',from);
   if(to) q=q.lte('work_date',to);
+  // 현장 필터
+  if(currentSiteId){ const sn=sites.find(s=>s.id===currentSiteId)?.name; if(sn) q=q.eq('site_name',sn); }
   const{data:logs,error}=await q;
   const el=document.getElementById('logs-content');
   if(error){ el.innerHTML=`<div class="config-warn">⚠️ ${error.message}</div>`; return; }
@@ -2115,6 +2117,8 @@ async function loadSummary(){
   if(from) q=q.gte('work_date',from);
   if(to) q=q.lte('work_date',to);
   if(search) q=q.eq('category',search);
+  // 현장 필터
+  if(currentSiteId){ const sn=sites.find(s=>s.id===currentSiteId)?.name; if(sn) q=q.eq('site_name',sn); }
   const{data:logs,error}=await q;
   const el=document.getElementById('sum-content');
   if(error){ el.innerHTML=`<div class="config-warn">⚠️ ${error.message}</div>`; return; }
@@ -2390,7 +2394,9 @@ function selectSite(id,name){
   localStorage.setItem('sel_site_name',name);
   updateHeaderSite(name);
   renderSiteList(); populateSiteSelects();
-  loadDashboard();
+  initDateFilters().then(()=>{
+    loadDashboard(); loadLogs(); loadSummary();
+  });
   toast(name+' 선택됨 ✓','ok');
 }
 async function addSite(){
