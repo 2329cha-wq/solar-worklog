@@ -796,10 +796,10 @@ function showConfigWarning(){
 
 async function loadAll(){
   if(!sbClient) return;
-  // 현장 복원
+  // 현장 복원 - id를 문자열 그대로 유지 (int/uuid 모두 호환)
   const sid=localStorage.getItem('sel_site_id');
   const sname=localStorage.getItem('sel_site_name');
-  if(sid&&sname){ currentSiteId=parseInt(sid); updateHeaderSite(sname); }
+  if(sid&&sname){ currentSiteId=sid; updateHeaderSite(sname); }
   await Promise.all([loadWorkTypes(), loadSites()]);
   await initDateFilters();
   loadDashboard(); loadLogs(); loadSummary();
@@ -2510,7 +2510,8 @@ function renderSiteList(){
   const doneSites=matched.filter(s=>s.is_completed);
 
   function siteCard(s, isDone){
-    const isSel=s.id===currentSiteId||s.id==currentSiteId;
+    const isSel=s.id==currentSiteId;
+    const sid=String(s.id); // uuid든 int든 문자열로 통일
     return `<div class="site-item ${isSel?'active':''} ${isDone?'site-done':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
@@ -2522,12 +2523,12 @@ function renderSiteList(){
           <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${[s.client,s.contractor,s.start_date].filter(Boolean).join(' · ')}</div>
         </div>
         <div style="display:flex;gap:4px;margin-left:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-          ${!isSel&&!isDone?`<button class="btn bp bsm" onclick="selectSite(${s.id})">선택</button>`:''}
+          ${!isSel&&!isDone?`<button class="btn bp bsm" onclick="selectSite('${sid}')">선택</button>`:''}
           ${!isDone
-            ?`<button class="btn bg bsm" onclick="completeSite(${s.id})">✅완료</button>`
-            :`<button class="btn bs bsm" onclick="revertSite(${s.id})">🔄복구</button>`}
-          <button class="btn bs bsm" onclick="openEditSite(${s.id})">수정</button>
-          <button class="btn bd bsm" onclick="deleteSite(${s.id})">삭제</button>
+            ?`<button class="btn bg bsm" onclick="completeSite('${sid}')">✅완료</button>`
+            :`<button class="btn bs bsm" onclick="revertSite('${sid}')">🔄복구</button>`}
+          <button class="btn bs bsm" onclick="openEditSite('${sid}')">수정</button>
+          <button class="btn bd bsm" onclick="deleteSite('${sid}')">삭제</button>
         </div>
       </div>
     </div>`;
@@ -2578,17 +2579,14 @@ function copyAllSiteInfo(id){
   });
 }
 function selectSite(id){
-  const s=sites.find(x=>x.id===parseInt(id)||x.id==id); if(!s) return;
-  const name=s.name;
-  currentSiteId=parseInt(id);
-  localStorage.setItem('sel_site_id',id);
-  localStorage.setItem('sel_site_name',name);
-  updateHeaderSite(name);
+  const s=sites.find(x=>x.id==id); if(!s) return;
+  currentSiteId=s.id;
+  localStorage.setItem('sel_site_id', String(s.id));
+  localStorage.setItem('sel_site_name', s.name);
+  updateHeaderSite(s.name);
   renderSiteList(); populateSiteSelects();
-  initDateFilters().then(()=>{
-    loadDashboard(); loadLogs(); loadSummary();
-  });
-  toast(name+' 선택됨 ✓','ok');
+  initDateFilters().then(()=>{ loadDashboard(); loadLogs(); loadSummary(); });
+  toast(s.name+' 선택됨 ✓','ok');
 }
 async function addSite(){
   const name=document.getElementById('new-site-name').value.trim();
@@ -2624,7 +2622,7 @@ async function deleteSite(id){
   await loadSites(); toast('삭제됨','ok');
 }
 function openEditSite(id){
-  const s=sites.find(x=>x.id===id); if(!s) return;
+  const s=sites.find(x=>x.id==id); if(!s) return;
   document.getElementById('es-id').value=s.id;
   document.getElementById('es-name').value=s.name||'';
   document.getElementById('es-client').value=s.client||'';
@@ -2654,16 +2652,16 @@ async function saveEditSite(){
   await loadSites(); toast('수정됨 ✓','ok');
 }
 async function completeSite(id){
-  const s=sites.find(x=>x.id===parseInt(id)||x.id==id); if(!s) return;
+  const s=sites.find(x=>x.id==id); if(!s) return;
   if(!confirm(`'${s.name}'\n공사완료 처리하시겠습니까?\n\n완료된 현장은 달력에서 표시되지 않습니다.`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id',id);
+  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id', s.id);
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
   await loadSites(); toast(s.name+' 공사완료 처리됨 ✓','ok');
 }
 async function revertSite(id){
-  const s=sites.find(x=>x.id===parseInt(id)||x.id==id); if(!s) return;
+  const s=sites.find(x=>x.id==id); if(!s) return;
   if(!confirm(`'${s.name}'\n작업중으로 되돌리시겠습니까?`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id',id);
+  const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id', s.id);
   if(error){ toast('처리 실패: '+error.message,'err'); return; }
   await loadSites(); toast(s.name+' 진행중으로 변경됨 ✓','ok');
 }
