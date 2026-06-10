@@ -445,17 +445,56 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 
 <!-- 내보내기 모달 -->
 <div class="modal-overlay" id="export-modal">
-  <div class="modal" style="max-height:65vh">
-    <div class="modal-title">📊 데이터 내보내기<button class="modal-close" onclick="document.getElementById('export-modal').classList.remove('open')">✕</button></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">시작일</label><input type="date" class="fi" id="exp-from"></div>
-      <div class="fg"><label class="fl">종료일</label><input type="date" class="fi" id="exp-to"></div>
+  <div class="modal" style="max-height:80vh">
+    <div class="modal-title">📊 엑셀 템플릿 내보내기<button class="modal-close" onclick="document.getElementById('export-modal').classList.remove('open')">✕</button></div>
+
+    <!-- 안내 -->
+    <div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;line-height:1.7;color:var(--text-dim)">
+      📌 <strong style="color:var(--sun)">사용법</strong><br>
+      엑셀 템플릿을 열고 → 각 버튼 클릭해서 복사 → 해당 시트의 표시된 셀에 붙여넣기 (Ctrl+V)
     </div>
-    <button class="btn bp bfull" onclick="exportExcel()" style="margin-bottom:8px;background:linear-gradient(135deg,#217346,#1a5c38)">📊 엑셀 다운로드 (.xlsx)</button>
-    <button class="btn bs bfull" onclick="exportCSV()" style="margin-bottom:10px;font-size:12px;opacity:0.7">📄 CSV (텍스트)</button>
-    <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:8px">
-      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">📷 사진 다운로드 — 위 날짜 범위 기준</div>
-      <button class="btn bs bfull" onclick="exportPhotosRange()">📷 날짜 범위 사진 다운로드</button>
+
+    <!-- 기간 필터 -->
+    <div class="fr" style="margin-bottom:14px">
+      <div class="fg"><label class="fl">작업일지 시작일</label><input type="date" class="fi" id="exp-from"></div>
+      <div class="fg"><label class="fl">작업일지 종료일</label><input type="date" class="fi" id="exp-to"></div>
+    </div>
+
+    <!-- 복사 버튼 3개 -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">① 현장정보</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px">현장정보 시트 → C4 셀에 붙여넣기</div>
+          </div>
+          <button class="btn bp bsm" id="copy-site-btn" onclick="copyForExcel('site')" style="white-space:nowrap">📋 복사</button>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">② 작업일지</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px">작업일지 시트 → A4 셀에 붙여넣기</div>
+          </div>
+          <button class="btn bp bsm" id="copy-log-btn" onclick="copyForExcel('log')" style="white-space:nowrap">📋 복사</button>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">③ 작업계획</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px">작업계획 시트 → A4 셀에 붙여넣기</div>
+          </div>
+          <button class="btn bp bsm" id="copy-plan-btn" onclick="copyForExcel('plan')" style="white-space:nowrap">📋 복사</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사진 -->
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">📷 사진 다운로드</div>
+      <button class="btn bs bfull bsm" onclick="exportPhotosRange()">📷 날짜 범위 사진 일괄 다운로드</button>
     </div>
   </div>
 </div>
@@ -1811,11 +1850,36 @@ function renderSiteList(){
   el.innerHTML=sites.map(s=>{
     const isSel=s.id===currentSiteId||s.id==currentSiteId;
     const sn=s.name.replace(/'/g,"\\'");
+    const infoRows=[
+      {label:'공사명',   val:s.name||''},
+      {label:'발주처',   val:s.client||''},
+      {label:'시공사',   val:s.contractor||''},
+      {label:'공사위치', val:s.location||''},
+      {label:'착공일',   val:s.start_date||''},
+      {label:'준공예정', val:s.end_date||''},
+    ];
+    const copyTable=isSel?`
+      <div style="margin-top:12px;background:var(--surface);border-radius:8px;overflow:hidden;border:1px solid var(--border)">
+        <div style="padding:8px 12px;background:rgba(245,166,35,0.1);font-size:11px;font-weight:700;color:var(--sun);border-bottom:1px solid var(--border)">
+          📋 엑셀 템플릿 현장정보 복사 — 각 항목 복사 후 해당 셀에 붙여넣기
+        </div>
+        ${infoRows.map(r=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">
+            <div style="display:flex;align-items:center;gap:10px;flex:1">
+              <span style="font-size:11px;color:var(--text-dim);min-width:58px">${r.label}</span>
+              <span style="font-size:13px;color:var(--text)">${r.val||'<span style="color:var(--text-dim);font-size:11px">미입력</span>'}</span>
+            </div>
+            ${r.val?`<button class="btn bs bsm" style="font-size:11px;padding:5px 10px;flex-shrink:0" onclick="copyVal(this,'${r.val.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}','${r.label}')">📋 복사</button>`:''}
+          </div>`).join('')}
+        <div style="padding:10px 12px">
+          <button class="btn bp bfull bsm" onclick="copyAllSiteInfo(${s.id})" style="font-size:12px">📋 전체 복사 (탭 구분 — 엑셀 C4에 붙여넣기)</button>
+        </div>
+      </div>`:'';
     return `<div class="site-item ${isSel?'active':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <div style="font-size:13px;font-weight:700">${s.name}${isSel?'<span class="site-badge">선택중</span>':''}</div>
-          <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${s.client||''} · ${s.contractor||''} · ${s.start_date||''}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${[s.client,s.contractor,s.start_date].filter(Boolean).join(' · ')}</div>
         </div>
         <div style="display:flex;gap:5px;margin-left:8px">
           ${!isSel?`<button class="btn bp bsm" onclick="selectSite(${s.id},'${sn}')">선택</button>`:''}
@@ -1823,8 +1887,36 @@ function renderSiteList(){
           <button class="btn bd bsm" onclick="deleteSite(${s.id})">삭제</button>
         </div>
       </div>
+      ${copyTable}
     </div>`;
   }).join('');
+}
+
+function copyVal(btn, val, label){
+  navigator.clipboard.writeText(val).then(()=>{
+    const orig=btn.textContent; btn.textContent='✓ 복사됨';
+    btn.style.color='var(--green)';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.color=''; },1500);
+    toast(label+' 복사됨 ✓','ok');
+  }).catch(()=>{
+    const el=document.createElement('textarea');
+    el.value=val; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    toast(label+' 복사됨 ✓','ok');
+  });
+}
+
+function copyAllSiteInfo(id){
+  const s=sites.find(x=>x.id===id); if(!s) return;
+  const rows=[s.name||'',s.client||'',s.contractor||'',s.location||'',s.start_date||'',s.end_date||''].join('\t');
+  navigator.clipboard.writeText(rows).then(()=>{
+    toast('전체 복사됨 ✓  엑셀 현장정보 시트 C4 클릭 후 붙여넣기!','ok');
+  }).catch(()=>{
+    const el=document.createElement('textarea');
+    el.value=rows; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    toast('전체 복사됨 ✓  엑셀 C4에 붙여넣기!','ok');
+  });
 }
 function selectSite(id,name){
   currentSiteId=parseInt(id);
@@ -1875,78 +1967,261 @@ async function saveEditSite(){
 // 내보내기
 // ═══════════════════════════════════════════
 function openExportModal(){ document.getElementById('export-modal').classList.add('open'); }
+
+async function copyForExcel(type){
+  const btn=document.getElementById(`copy-${type}-btn`);
+  const orig=btn?btn.textContent:'';
+  if(btn){ btn.textContent='⏳ 준비중...'; btn.disabled=true; }
+
+  try{
+    let tsv='';
+
+    if(type==='site'){
+      // 현장정보 - 세로로 한 행씩 (C열에 붙여넣기)
+      const s=sites.find(x=>x.id===currentSiteId)||{};
+      // C4~C9: 공사명, 발주처, 시공사, 위치, 착공일, 준공예정일
+      // 세로 붙여넣기: 각 줄이 아래 행으로 들어감
+      tsv=[
+        s.name||'',
+        s.client||'',
+        s.contractor||'',
+        s.location||'',
+        s.start_date||'',
+        s.end_date||'',
+      ].join('\n');
+      if(btn){ btn.textContent='✓ 복사됨!'; btn.style.background='var(--green)'; }
+      toast('현장정보 복사됨 ✓  →  엑셀 현장정보 시트 C4 클릭 후 Ctrl+V','ok');
+
+    } else if(type==='log'){
+      // 작업일지 - 탭 구분 TSV
+      const from=document.getElementById('exp-from')?.value;
+      const to=document.getElementById('exp-to')?.value;
+      let q=sbClient.from('daily_logs').select('*').order('work_date').order('category');
+      if(from) q=q.gte('work_date',from);
+      if(to) q=q.lte('work_date',to);
+      const{data:logs,error}=await q;
+      if(error||!logs||!logs.length){ toast('작업일지 데이터가 없습니다','err'); return; }
+      const rows=logs.map(l=>{
+        let matStr='';
+        if(l.materials){try{const m=JSON.parse(l.materials);matStr=m.filter(x=>x.name||x.qty).map(x=>(x.name||'')+(x.qty?' '+x.qty:'')+(x.unit||'')).join(', ');}catch(e){}}
+        else if(l.mat1_name) matStr=(l.mat1_name||'')+(l.qty1_val?' '+l.qty1_val:'')+(l.qty1_unit||'');
+        return [
+          l.work_date||'',
+          l.site_name||'',
+          l.category||'',
+          l.sub_category||'',
+          (l.detail||'').replace(/\t/g,' ').replace(/\n/g,' '),
+          l.workers||'',
+          parseFloat(l.manday||0).toFixed(2),
+          l.start_time||'',
+          l.end_time||'',
+          l.weather||'',
+          l.manager||'',
+          (l.memo||'').replace(/\t/g,' ').replace(/\n/g,' '),
+        ].join('\t');
+      });
+      tsv=rows.join('\n');
+      if(btn){ btn.textContent='✓ 복사됨!'; btn.style.background='var(--green)'; }
+      toast(`작업일지 ${logs.length}건 복사됨 ✓  →  엑셀 작업일지 시트 A4 클릭 후 Ctrl+V`,'ok');
+
+    } else if(type==='plan'){
+      // 작업계획
+      const{data:plans,error}=await sbClient.from('work_plans').select('*').order('sort_order',{ascending:true});
+      if(error||!plans||!plans.length){ toast('작업계획 데이터가 없습니다','err'); return; }
+      // 대분류별 실적 집계 (작업일지에서)
+      const{data:logs}=await sbClient.from('daily_logs').select('category,manday');
+      const actualByCat={};
+      (logs||[]).forEach(l=>{ if(!actualByCat[l.category]) actualByCat[l.category]=0; actualByCat[l.category]+=parseFloat(l.manday||0); });
+      const rows=plans.map(p=>{
+        const planned=parseFloat(p.planned_manday||0);
+        const actual=parseFloat(p.actual_manday||0)||actualByCat[p.category]||0;
+        const pct=planned>0?(actual/planned*100).toFixed(1)+'%':'';
+        const status=p.is_completed?(actual<=planned?'일정내 완료':'지연 완료'):'진행중';
+        return [
+          p.site_name||'',
+          p.category||'',
+          p.sub_category||'',
+          planned.toFixed(2),
+          actual.toFixed(2),
+          pct,
+          status,
+          p.completed_at||'',
+          (p.note||'').replace(/\t/g,' ').replace(/\n/g,' '),
+        ].join('\t');
+      });
+      tsv=rows.join('\n');
+      if(btn){ btn.textContent='✓ 복사됨!'; btn.style.background='var(--green)'; }
+      toast(`작업계획 ${plans.length}건 복사됨 ✓  →  엑셀 작업계획 시트 A4 클릭 후 Ctrl+V`,'ok');
+    }
+
+    await navigator.clipboard.writeText(tsv);
+
+  } catch(err){
+    // clipboard API 실패시 fallback
+    const el=document.createElement('textarea');
+    el.value=tsv||''; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    if(btn){ btn.textContent='✓ 복사됨!'; btn.style.background='var(--green)'; }
+    toast('복사됨 ✓','ok');
+  } finally {
+    if(btn) setTimeout(()=>{ btn.textContent=orig; btn.style.background=''; btn.disabled=false; }, 2500);
+  }
+}
 async function exportExcel(){
   document.getElementById('export-modal').classList.remove('open');
   const from=document.getElementById('exp-from')?.value;
   const to=document.getElementById('exp-to')?.value;
   toast('엑셀 생성 중...','');
-  let q=sbClient.from('daily_logs').select('*').order('work_date').order('category');
-  if(from) q=q.gte('work_date',from);
-  if(to) q=q.lte('work_date',to);
-  const{data:logs,error}=await q;
-  if(error||!logs||!logs.length){ toast('데이터가 없습니다','err'); return; }
-  const siteName=sites.find(s=>s.id===currentSiteId)?.name||'';
-  const siteInfo=sites.find(s=>s.id===currentSiteId)||{};
-  const wb=XLSX.utils.book_new();
 
-  // 시트1: 일별 작업일지
-  const ws1Data=[];
-  ws1Data.push(['태양광 설치공사 작업일지']);
-  ws1Data.push(['공사명',siteName,'','발주처',siteInfo.client||'']);
-  ws1Data.push(['시공사',siteInfo.contractor||'','','공사기간',(siteInfo.start_date||'')+'~'+(siteInfo.end_date||'')]);
-  ws1Data.push([]);
-  ws1Data.push(['날짜','대분류','소분류','세부작업내용','부재명/수량','투입인원(명)','작업시간(h)','M/D','시작','종료','날씨','확인자','특이사항']);
-  const dateGroups={};
-  logs.forEach(l=>{ if(!dateGroups[l.work_date]) dateGroups[l.work_date]=[]; dateGroups[l.work_date].push(l); });
-  Object.entries(dateGroups).forEach(function([date,items]){
-    items.forEach(function(l,i){
-      const w=parseFloat(l.workers)||0, md=parseFloat(l.manday)||0;
-      const h=w>0?Math.round(md*8/w*100)/100:0;
-      let matStr='';
-      if(l.materials){try{const m=JSON.parse(l.materials);matStr=m.map(x=>(x.name||'')+(x.qty?' '+x.qty:'')+(x.unit||'')).join(', ');}catch(e){}}
-      else if(l.mat1_name||l.qty1_val) matStr=(l.mat1_name||'')+(l.qty1_val?' '+l.qty1_val:'')+(l.qty1_unit||'');
-      ws1Data.push([i===0?date:'',l.category,l.sub_category,l.detail||'',matStr,l.workers||'',h||'',parseFloat(l.manday)||'',l.start_time||'',l.end_time||'',l.weather||'',l.manager||'',i===0?(l.memo||''):'']);
-    });
-    const dateMd=items.reduce((s,l)=>s+parseFloat(l.manday||0),0);
-    ws1Data.push(['','','','','','소계','',dateMd.toFixed(2),'','','','','']);
-    ws1Data.push([]);
+  // 데이터 한번에 로드
+  let logQ=sbClient.from('daily_logs').select('*').order('work_date').order('category');
+  if(from) logQ=logQ.gte('work_date',from);
+  if(to) logQ=logQ.lte('work_date',to);
+  const[{data:logs,error:e1},{data:plans,error:e2}]=await Promise.all([
+    logQ,
+    sbClient.from('work_plans').select('*').order('sort_order',{ascending:true})
+  ]);
+  if(e1||!logs||!logs.length){ toast('작업일지 데이터가 없습니다','err'); return; }
+
+  const selSite=sites.find(s=>s.id===currentSiteId)||{};
+  const siteName=selSite.name||'';
+  const siteLogs=siteName? logs.filter(l=>l.site_name===siteName) : logs;
+  const allPlans=plans||[];
+  const sitePlans=siteName? allPlans.filter(p=>p.site_name===siteName) : allPlans;
+
+  // 대분류별 실적 집계
+  const actualByCat={};
+  siteLogs.forEach(l=>{
+    if(!actualByCat[l.category]) actualByCat[l.category]=0;
+    actualByCat[l.category]+=parseFloat(l.manday||0);
   });
-  const totalMd=logs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
-  ws1Data.push(['','','','','','총 합계 M/D','',totalMd.toFixed(2),'','','','','']);
-  const ws1=XLSX.utils.aoa_to_sheet(ws1Data);
-  ws1['!cols']=[{wch:12},{wch:16},{wch:20},{wch:28},{wch:22},{wch:10},{wch:10},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:24}];
-  ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:12}},{s:{r:1,c:1},e:{r:1,c:2}},{s:{r:2,c:1},e:{r:2,c:2}}];
-  XLSX.utils.book_append_sheet(wb,ws1,'일별작업일지');
 
-  // 시트2: M/D 집계
-  const ws2Data=[];
-  ws2Data.push(['공종별 M/D 집계표']);
-  ws2Data.push(['공사명',siteName]);
-  ws2Data.push([]);
-  ws2Data.push(['대분류','소분류','작업일수','투입인원(최대)','총 M/D','비고']);
+  const wb=XLSX.utils.book_new();
+  const today=new Date().toISOString().split('T')[0];
+
+  // ══ 시트1: 현장정보 & 종합현황 ══
+  const ws0Data=[];
+  ws0Data.push(['태양광 설치공사 작업일지 - 종합현황']);
+  ws0Data.push([]);
+  ws0Data.push(['■ 현장 기본정보','','','','','']);
+  ws0Data.push(['공  사  명',siteName,'','발  주  처',selSite.client||'','']);
+  ws0Data.push(['시  공  사',selSite.contractor||'','','공사위치',selSite.location||'','']);
+  ws0Data.push(['착  공  일',selSite.start_date||'','','준공예정일',selSite.end_date||'','']);
+  ws0Data.push(['작  성  일',today,'','','','']);
+  ws0Data.push([]);
+  ws0Data.push(['■ 작업 실적 요약','','','','','']);
+  const totalMd=siteLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
+  const totalDays=new Set(siteLogs.map(l=>l.work_date)).size;
+  const dateWorkerMap={};
+  siteLogs.forEach(l=>{ dateWorkerMap[l.work_date]=Math.max(dateWorkerMap[l.work_date]||0,l.workers||0); });
+  const totalWorkers=Object.values(dateWorkerMap).reduce((s,v)=>s+v,0);
+  ws0Data.push(['총 맨데이 (M/D)',totalMd.toFixed(2),'인·일','총 작업일수',totalDays,'일']);
+  ws0Data.push(['누적 투입인원',totalWorkers,'명','기준일',today,'']);
+  ws0Data.push([]);
+  ws0Data.push(['■ 작업계획 대비 실적','','','','','']);
+  ws0Data.push(['공종 (대분류)','소분류','예상 M/D','실적 M/D','달성률(%)','완료여부','완료일']);
+  sitePlans.forEach(p=>{
+    const planned=parseFloat(p.planned_manday||0);
+    const actual=parseFloat(p.actual_manday||0)||actualByCat[p.category]||0;
+    const pct=planned>0?(actual/planned*100).toFixed(1):'';
+    ws0Data.push([p.category,p.sub_category||'',planned.toFixed(2),actual.toFixed(2),pct,p.is_completed?'완료':'진행중',p.completed_at||'']);
+  });
+  if(!sitePlans.length) ws0Data.push(['(작업 계획 없음)','','','','','','']);
+  ws0Data.push([]);
+  ws0Data.push(['■ 공종별 실적 요약','','','','','']);
+  ws0Data.push(['대분류','소분류','작업일수','최대인원','총 M/D','']);
   const catMap={};
-  logs.forEach(function(l){
+  siteLogs.forEach(l=>{
     const k=l.category+'||'+l.sub_category;
     if(!catMap[k]) catMap[k]={cat:l.category,sub:l.sub_category,dates:new Set(),workers:0,md:0};
     catMap[k].dates.add(l.work_date);
     catMap[k].workers=Math.max(catMap[k].workers,parseFloat(l.workers||0));
     catMap[k].md+=parseFloat(l.manday||0);
   });
-  let prevCat='',grandMd=0;
-  Object.values(catMap).forEach(function(v){
-    ws2Data.push([v.cat===prevCat?'':v.cat,v.sub,v.dates.size,v.workers,parseFloat(v.md.toFixed(2)),'']);
-    prevCat=v.cat; grandMd+=v.md;
+  let prevCat2='';
+  Object.values(catMap).forEach(v=>{
+    ws0Data.push([v.cat===prevCat2?'':v.cat,v.sub,v.dates.size,v.workers,parseFloat(v.md.toFixed(2)),'']);
+    prevCat2=v.cat;
   });
-  ws2Data.push([]);
-  ws2Data.push(['합계','','','',parseFloat(grandMd.toFixed(2)),'']);
-  const ws2=XLSX.utils.aoa_to_sheet(ws2Data);
-  ws2['!cols']=[{wch:18},{wch:22},{wch:10},{wch:14},{wch:10},{wch:20}];
-  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
-  XLSX.utils.book_append_sheet(wb,ws2,'MD집계');
+  const ws0=XLSX.utils.aoa_to_sheet(ws0Data);
+  ws0['!cols']=[{wch:18},{wch:22},{wch:10},{wch:12},{wch:18},{wch:10},{wch:12}];
+  ws0['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
+  XLSX.utils.book_append_sheet(wb,ws0,'종합현황');
 
-  const fname='태양광작업일지_'+(siteName||'현장')+'_'+new Date().toISOString().split('T')[0]+'.xlsx';
+  // ══ 시트2: 작업계획 상세 ══
+  const ws1Data=[];
+  ws1Data.push(['작업 계획 현황표']);
+  ws1Data.push(['공사명',siteName,'','기준일',today]);
+  ws1Data.push([]);
+  ws1Data.push(['No','공종 (대분류)','소분류','예상 M/D','실적 M/D','달성률','상태','완료일','비고']);
+  sitePlans.forEach((p,i)=>{
+    const planned=parseFloat(p.planned_manday||0);
+    const actual=parseFloat(p.actual_manday||0)||actualByCat[p.category]||0;
+    const pct=planned>0?(actual/planned*100).toFixed(1)+'%':'';
+    const status=p.is_completed?(actual<=planned?'일정내 완료':'지연 완료'):'진행중';
+    ws1Data.push([i+1,p.category,p.sub_category||'',planned.toFixed(2),actual.toFixed(2),pct,status,p.completed_at||'',p.note||'']);
+  });
+  if(!sitePlans.length) ws1Data.push(['','(등록된 계획 없음)','','','','','','','']);
+  ws1Data.push([]);
+  const totalPlanned=sitePlans.reduce((s,p)=>s+parseFloat(p.planned_manday||0),0);
+  const totalActual=sitePlans.reduce((s,p)=>s+parseFloat(p.actual_manday||0||actualByCat[p.category]||0),0);
+  ws1Data.push(['','합계','',totalPlanned.toFixed(2),totalActual.toFixed(2),totalPlanned>0?(totalActual/totalPlanned*100).toFixed(1)+'%','','','']);
+  const ws1=XLSX.utils.aoa_to_sheet(ws1Data);
+  ws1['!cols']=[{wch:5},{wch:18},{wch:18},{wch:10},{wch:10},{wch:8},{wch:12},{wch:12},{wch:24}];
+  ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
+  XLSX.utils.book_append_sheet(wb,ws1,'작업계획');
+
+  // ══ 시트3: 일별 작업일지 ══
+  const ws2Data=[];
+  ws2Data.push(['일별 작업일지']);
+  ws2Data.push(['공사명',siteName,'','발주처',selSite.client||'','','시공사',selSite.contractor||'']);
+  ws2Data.push(['공사기간',(selSite.start_date||'')+(selSite.end_date?' ~ '+selSite.end_date:''),'','공사위치',selSite.location||'','','','']);
+  ws2Data.push([]);
+  ws2Data.push(['날짜','대분류','소분류','세부작업내용','부재명/수량','투입인원','작업시간(h)','M/D','시작','종료','날씨','확인자','특이사항']);
+  const dateGroups={};
+  siteLogs.forEach(l=>{ if(!dateGroups[l.work_date]) dateGroups[l.work_date]=[]; dateGroups[l.work_date].push(l); });
+  Object.entries(dateGroups).forEach(([date,items])=>{
+    items.forEach((l,i)=>{
+      const w=parseFloat(l.workers)||0, md=parseFloat(l.manday)||0;
+      const h=w>0?Math.round(md*8/w*100)/100:'';
+      let matStr='';
+      if(l.materials){try{const m=JSON.parse(l.materials);matStr=m.filter(x=>x.name||x.qty).map(x=>(x.name||'')+(x.qty?' '+x.qty:'')+(x.unit||'')).join(', ');}catch(e){}}
+      else if(l.mat1_name||l.qty1_val) matStr=(l.mat1_name||'')+(l.qty1_val?' '+l.qty1_val:'')+(l.qty1_unit||'');
+      ws2Data.push([i===0?date:'',l.category,l.sub_category,l.detail||'',matStr,l.workers||'',h,parseFloat(l.manday)||'',l.start_time||'',l.end_time||'',l.weather||'',l.manager||'',i===0?(l.memo||''):'']);
+    });
+    const dateMd=items.reduce((s,l)=>s+parseFloat(l.manday||0),0);
+    ws2Data.push(['','','','','','소 계','',dateMd.toFixed(2),'','','','','']);
+    ws2Data.push([]);
+  });
+  const grandMd=siteLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
+  ws2Data.push(['','','','','','총 합계 M/D','',grandMd.toFixed(2),'','','','','']);
+  const ws2=XLSX.utils.aoa_to_sheet(ws2Data);
+  ws2['!cols']=[{wch:12},{wch:16},{wch:20},{wch:28},{wch:22},{wch:10},{wch:10},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:24}];
+  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:12}},{s:{r:1,c:1},e:{r:1,c:2}},{s:{r:1,c:4},e:{r:1,c:5}},{s:{r:1,c:7},e:{r:1,c:8}},{s:{r:2,c:1},e:{r:2,c:2}}];
+  XLSX.utils.book_append_sheet(wb,ws2,'일별작업일지');
+
+  // ══ 시트4: 공종별 M/D 집계 ══
+  const ws3Data=[];
+  ws3Data.push(['공종별 M/D 집계표']);
+  ws3Data.push(['공사명',siteName,'','기준일',today]);
+  ws3Data.push([]);
+  ws3Data.push(['No','대분류','소분류','작업일수','투입인원(최대)','총 M/D','작업날짜']);
+  let no=1, prevCat3='', grandMd2=0;
+  Object.values(catMap).forEach(v=>{
+    const dates=[...v.dates].sort().join(', ');
+    ws3Data.push([no++,v.cat===prevCat3?'':v.cat,v.sub,v.dates.size,v.workers,parseFloat(v.md.toFixed(2)),dates]);
+    prevCat3=v.cat; grandMd2+=v.md;
+  });
+  ws3Data.push([]);
+  ws3Data.push(['','합계','','','',(grandMd2).toFixed(2),'']);
+  const ws3=XLSX.utils.aoa_to_sheet(ws3Data);
+  ws3['!cols']=[{wch:5},{wch:18},{wch:22},{wch:10},{wch:14},{wch:10},{wch:50}];
+  ws3['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
+  XLSX.utils.book_append_sheet(wb,ws3,'MD집계');
+
+  const fname='태양광작업일지_'+(siteName||'현장')+'_'+today+'.xlsx';
   XLSX.writeFile(wb,fname);
-  toast('엑셀 저장 완료 ✓','ok');
+  toast('엑셀 저장 완료 ✓ (4개 시트)','ok');
 }
 
 async function exportCSV(){
