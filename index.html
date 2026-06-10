@@ -35,9 +35,9 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 /* 탭 */
 .tab-nav{display:flex;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
 .tab-nav::-webkit-scrollbar{display:none}
+.tab-btn{flex:1;min-width:68px;padding:10px 6px;background:none;border:none;color:var(--text-dim);font-size:10px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2px solid transparent;transition:all 0.2s}
 .tab-btn{flex:1;min-width:68px;padding:11px 6px;background:none;border:none;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2px solid transparent;transition:all 0.2s}
 .tab-btn .ti{font-size:19px}
-.tab-btn.active{color:var(--sun);border-bottom:2px solid var(--sun)}
 /* 뷰 */
 .view{display:none;padding:16px;max-width:680px;margin:0 auto}
 .view.active{display:block}
@@ -175,12 +175,15 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 #photo-viewer-modal{cursor:zoom-out}
 /* PC 폰트 확대 */
 @media(min-width:768px){
+@media(min-width:768px){
   body{font-size:17px}
   .app-title{font-size:18px}
   .header-site{font-size:14px}
   .sun-icon{width:40px;height:40px}
+  .tab-btn{font-size:13px;padding:13px 12px}
   .tab-btn{font-size:14px;padding:14px 12px}
   .tab-btn .ti{font-size:22px}
+  .card{padding:20px}
   .card{padding:22px}
   .card-title{font-size:18px;margin-bottom:16px}
   .fl{font-size:14px}
@@ -224,27 +227,87 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   .db-main{flex:1.6;min-width:0}
   .db-side{flex:1;min-width:0;position:sticky;top:0}
 }
-/* ── 달력 컬러 (공통) ── */
-.cal-dot.s0,.cal-dot.site0{background:rgba(46,184,92,0.28);color:rgba(120,230,150,1);font-weight:700}
-.cal-dot.s1,.cal-dot.site1{background:rgba(180,110,220,0.28);color:rgba(210,160,255,1);font-weight:700}
-.cal-dot.s2,.cal-dot.site2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
-.cal-dot.s3,.cal-dot.site3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
+/* ── 달력 ── */
+.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cal-title{font-size:14px;font-weight:700;color:var(--sun)}
+.cal-nav{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 9px;cursor:pointer;font-size:12px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.cal-dow{text-align:center;font-size:10px;font-weight:700;color:var(--text-dim);padding:3px 0}
+.cal-dow:first-child{color:#e74c3c}.cal-dow:last-child{color:#3498db}
+.cal-day{min-height:44px;background:var(--sky-dark);border-radius:3px;padding:2px 3px;font-size:10px}
+.cal-day.other-month{opacity:0.25}
+.cal-day.today{background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.5)}
+.cal-day-num{font-size:10px;font-weight:700;color:var(--text-dim);margin-bottom:1px}
+.cal-day.today .cal-day-num{color:var(--sun)}
+.cal-dot{border-radius:2px;padding:1px 3px;font-size:8px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px}
+.cal-dot.work{background:rgba(41,182,246,0.2);color:#29B6F6}
+.cal-dot.ev{background:rgba(245,166,35,0.2);color:var(--sun)}
+.cal-dot.site0{background:rgba(46,184,92,0.28);color:rgba(120,230,150,1);font-weight:700}
+.cal-dot.site1{background:rgba(180,110,220,0.28);color:rgba(210,160,255,1);font-weight:700}
+.cal-dot.site2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
+.cal-dot.site3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
+.cal-dot.site-s{font-weight:900}
+/* s0~s4 (달력 탭용 - 모바일에도 동일하게 밝게) */
+.cal-dot.s0{background:rgba(46,184,92,0.28);color:rgba(120,230,150,1);font-weight:700}
+.cal-dot.s1{background:rgba(180,110,220,0.28);color:rgba(210,160,255,1);font-weight:700}
+.cal-dot.s2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
+.cal-dot.s3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
 .cal-dot.s4{background:rgba(230,126,34,0.28);color:rgba(255,180,80,1);font-weight:700}
+.cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
+.cal-dot.ev-dot.done{opacity:0.4}
 .cal-dot.ev-s0{background:rgba(46,184,92,0.9);color:#fff;font-weight:900}
 .cal-dot.ev-s1{background:rgba(155,89,182,0.9);color:#fff;font-weight:900}
 .cal-dot.ev-s2{background:rgba(231,76,60,0.85);color:#fff;font-weight:900}
 .cal-dot.ev-s3{background:rgba(52,152,219,0.9);color:#fff;font-weight:900}
 .cal-dot.ev-s4{background:rgba(230,126,34,0.9);color:#fff;font-weight:900}
 .cal-dot.ev-s0.done,.cal-dot.ev-s1.done,.cal-dot.ev-s2.done,.cal-dot.ev-s3.done,.cal-dot.ev-s4.done{opacity:0.4}
-/* ── 이벤트 공통 ── */
-.ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:7px}
-.ev-item:last-child{margin-bottom:0}
+/* ── 이벤트 ── */
+.ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;margin-bottom:7px;position:relative}
 .ev-item.ev-done{opacity:0.5}
 .ev-item.ev-urgent{border-left:3px solid var(--red)}
 .ev-item.ev-soon{border-left:3px solid var(--sun)}
 .ev-item.ev-normal{border-left:3px solid #29B6F6}
 .ev-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
 .ev-meta{font-size:11px;color:var(--text-dim);margin-bottom:4px}
+.ev-badge{display:inline-flex;align-items:center;border-radius:10px;padding:2px 7px;font-size:11px;font-weight:700}
+.ev-badge.urgent{background:rgba(231,76,60,0.15);color:var(--red)}
+.ev-badge.soon{background:rgba(245,166,35,0.15);color:var(--sun)}
+.ev-badge.normal{background:rgba(41,182,246,0.12);color:#29B6F6}
+.ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
+
+/* ── 달력 탭 ── */
+.cal-layout{display:flex;flex-direction:column !important;gap:18px}
+.cal-main{width:100%;max-width:100%}
+.cal-side{width:100%;max-width:100%}
+.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-title{font-size:15px;font-weight:700;color:var(--sun)}
+.cal-nav{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 11px;cursor:pointer;font-size:13px}
+.cal-nav:hover{border-color:var(--sun);color:var(--sun)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text-dim);padding:4px 0}
+.cal-dow:first-child{color:#e74c3c}.cal-dow:last-child{color:#3498db}
+.cal-day{min-height:56px;background:var(--sky-dark);border-radius:4px;padding:3px 4px;font-size:10px;cursor:pointer;transition:background 0.15s}
+.cal-day:hover{background:rgba(255,255,255,0.06)}
+.cal-day.other-month{opacity:0.25}
+.cal-day.today{background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.5)}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:2px}
+.cal-day.today .cal-day-num{color:var(--sun)}
+.cal-dot{border-radius:2px;padding:1px 4px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px;display:block}
+.cal-dot.work{background:rgba(41,182,246,0.2);color:#29B6F6}
+.cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
+.cal-dot.ev-dot.done{opacity:0.4}
+.cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cal-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim)}
+/* ── 이벤트 ── */
+.ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:8px}
+.ev-item.ev-urgent{border-left:3px solid var(--red)}
+.ev-item.ev-soon{border-left:3px solid var(--sun)}
+.ev-item.ev-normal{border-left:3px solid #29B6F6}
+.ev-item.ev-done{opacity:0.5;border-left:3px solid rgba(255,255,255,0.1)}
+.ev-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}
+.ev-meta{font-size:11px;color:var(--text-dim);margin-bottom:5px}
 .ev-badge{display:inline-flex;align-items:center;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
 .ev-badge.urgent{background:rgba(231,76,60,0.15);color:var(--red)}
 .ev-badge.soon{background:rgba(245,166,35,0.15);color:var(--sun)}
@@ -252,70 +315,32 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
 
 /* ── 달력 탭 레이아웃 ── */
-.cal-layout{display:flex;flex-direction:column;gap:14px}
-.cal-main{width:100%}
-.cal-side{width:100%}
-@media(min-width:800px){
-  .cal-layout{flex-direction:row;align-items:flex-start}
-  .cal-main{flex:1.4;min-width:0}
-  .cal-side{flex:1;min-width:0}
-}
-.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px}
-.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.cal-title{font-size:15px;font-weight:700;color:var(--sun)}
-.cal-nav{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:5px 11px;cursor:pointer;font-size:13px}
+.cal-layout{display:flex;flex-direction:column !important;gap:18px}
+.cal-main{width:100%;max-width:100%}
+.cal-side{width:100%;max-width:100%}
+.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.cal-title{font-size:17px;font-weight:700;color:var(--sun)}
+.cal-nav{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px 14px;cursor:pointer;font-size:14px}
 .cal-nav:hover{border-color:var(--sun);color:var(--sun)}
-.cal-refresh{background:rgba(41,182,246,0.1);border:1px solid rgba(41,182,246,0.3);border-radius:4px;color:#29B6F6;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:600}
-/* 모바일: 7컬럼 셀을 작게, overflow 방지 */
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cal-dow{text-align:center;font-size:10px;font-weight:700;color:var(--text-dim);padding:4px 0}
+.cal-refresh{background:rgba(41,182,246,0.1);border:1px solid rgba(41,182,246,0.3);border-radius:4px;color:#29B6F6;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-dow{text-align:center;font-size:12px;font-weight:700;color:var(--text-dim);padding:6px 0}
 .cal-dow:first-child{color:#e74c3c}.cal-dow:last-child{color:#3498db}
-.cal-day{
-  min-height:52px;
-  background:var(--sky-dark);
-  border-radius:4px;
-  padding:3px 2px;
-  font-size:9px;
-  cursor:pointer;
-  transition:background 0.15s;
-  border:1px solid transparent;
-  overflow:hidden;
-}
+.cal-day{min-height:72px;background:var(--sky-dark);border-radius:5px;padding:4px 5px;font-size:10px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
 .cal-day:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.1)}
 .cal-day.other-month{opacity:0.2;cursor:default}
 .cal-day.other-month:hover{background:var(--sky-dark);border-color:transparent}
 .cal-day.today{background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.45)}
 .cal-day.has-work{border-color:rgba(41,182,246,0.3)}
-.cal-day-num{font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:2px;line-height:1}
-.cal-day.today .cal-day-num{color:var(--sun)}
-.cal-dot{
-  border-radius:2px;
-  padding:1px 2px;
-  font-size:8px;
-  font-weight:700;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  margin-bottom:1px;
-  display:block;
-  line-height:1.5;
-  max-width:100%;
-}
+.cal-day-num{font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:3px;line-height:1}
+.cal-day.today .cal-day-num{color:var(--sun);font-size:13px}
+.cal-dot{border-radius:3px;padding:1px 4px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;display:block;line-height:1.6}
 .cal-dot.work{background:rgba(41,182,246,0.2);color:#7EC8E3}
 .cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
 .cal-dot.ev-dot.done{opacity:0.35}
-.cal-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
-.cal-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-dim)}
-/* PC에서 여유있게 */
-@media(min-width:600px){
-  .cal-wrap{padding:16px}
-  .cal-grid{gap:3px}
-  .cal-day{min-height:72px;padding:4px 5px;font-size:10px}
-  .cal-day-num{font-size:12px;margin-bottom:3px}
-  .cal-dot{font-size:9px;padding:1px 4px;line-height:1.6;margin-bottom:2px}
-  .cal-title{font-size:17px}
-  .cal-nav{padding:6px 14px;font-size:14px}
-}
+.cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.cal-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim)}
 /* ── 날짜 클릭 팝업 ── */
 .day-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:900;display:none;align-items:center;justify-content:center;padding:16px}
 .day-popup-overlay.open{display:flex}
@@ -2195,15 +2220,8 @@ async function saveLog(){
     if(error){ toast('수정 실패: '+error.message,'err'); return; }
     for(const pm of photoMap){ if(pm.pIdx===0) await uploadCatPhotos(subId,pm.cid); }
   } else if(editId && editId.startsWith('DATE:')){
-    // 날짜 전체 수정: 기존 사진 log_id 보존을 위해 먼저 category->id 맵 저장
+    // 날짜 전체 수정: 삭제 후 재삽입
     const editDate=editId.replace('DATE:','');
-    const{data:oldRecs}=await sbClient.from('daily_logs').select('id,category').eq('work_date',editDate);
-    // category -> old log_id 배열 (같은 대분류 여러 개 대비)
-    const oldIdByCat={};
-    (oldRecs||[]).forEach(r=>{
-      if(!oldIdByCat[r.category]) oldIdByCat[r.category]=[];
-      oldIdByCat[r.category].push(r.id);
-    });
     const{error:delErr}=await sbClient.from('daily_logs').delete().eq('work_date',editDate);
     if(delErr){ toast('수정 실패: '+delErr.message,'err'); return; }
     const insertedIds=[];
@@ -2211,12 +2229,6 @@ async function saveLog(){
       const{data,error}=await sbClient.from('daily_logs').insert(payloads[i]).select().single();
       if(error){ toast('저장 실패: '+error.message,'err'); return; }
       insertedIds.push(data.id);
-      // 같은 대분류의 기존 사진을 새 log_id로 재연결
-      const cat=payloads[i].category;
-      if(oldIdByCat[cat]&&oldIdByCat[cat].length){
-        const oldId=oldIdByCat[cat].shift();
-        await sbClient.from('photos').update({log_id:data.id}).eq('log_id',oldId);
-      }
     }
     for(const pm of photoMap){ await uploadCatPhotos(insertedIds[pm.pIdx],pm.cid); }
   } else {
