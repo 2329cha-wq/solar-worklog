@@ -474,25 +474,36 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
     <div class="fg"><label class="fl">Anon Key</label><input type="text" class="fi" id="sb-key" placeholder="eyJh..."></div>
     <button class="btn bp bfull" onclick="saveConfig()">저장 및 연결</button>
   </div>
+  <!-- 진행중 현장 -->
   <div class="card">
     <div class="card-title">🏗️ 현장 관리</div>
     <div style="display:flex;gap:7px;margin-bottom:12px">
       <input type="text" class="fi" id="site-search" placeholder="현장명 검색..." oninput="renderSiteList()" style="flex:1">
     </div>
     <div id="site-list" style="margin-bottom:14px"></div>
-    <div class="fg"><label class="fl">현장명 *</label><input type="text" class="fi" id="new-site-name" placeholder="○○ 태양광 발전소 설치공사"></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">발주처</label><input type="text" class="fi" id="new-site-client"></div>
-      <div class="fg"><label class="fl">시공사</label><input type="text" class="fi" id="new-site-contractor"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:10px">+ 새 현장 추가</div>
+      <div class="fg"><label class="fl">현장명 *</label><input type="text" class="fi" id="new-site-name" placeholder="OO 태양광 발전소 설치공사"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">발주처</label><input type="text" class="fi" id="new-site-client"></div>
+        <div class="fg"><label class="fl">시공사</label><input type="text" class="fi" id="new-site-contractor"></div>
+      </div>
+      <div class="fg"><label class="fl">공사위치</label><input type="text" class="fi" id="new-site-location" placeholder="시/군/구 위치"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">착공일</label><input type="date" class="fi" id="new-site-start"></div>
+        <div class="fg"><label class="fl">준공예정일</label><input type="date" class="fi" id="new-site-end"></div>
+      </div>
+      <button class="btn bp bfull" onclick="addSite()">현장 추가</button>
     </div>
-    <div class="fg"><label class="fl">공사위치</label><input type="text" class="fi" id="new-site-location" placeholder="시/군/구 등 위치"></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">착공일</label><input type="date" class="fi" id="new-site-start"></div>
-      <div class="fg"><label class="fl">준공예정일</label><input type="date" class="fi" id="new-site-end"></div>
-    </div>
-    <button class="btn bp bfull" onclick="addSite()">현장 추가</button>
   </div>
-</div>
+  <!-- 완료 공사 별도 카드 -->
+  <div class="card">
+    <div class="card-title">✅ 완료 공사</div>
+    <div style="display:flex;gap:7px;margin-bottom:12px">
+      <input type="text" class="fi" id="done-site-search" placeholder="완료 공사 검색..." oninput="renderSiteList()" style="flex:1">
+    </div>
+    <div id="done-site-list"></div>
+  </div>
 
 <!-- ══ 모달들 ══ -->
 
@@ -2500,25 +2511,20 @@ function populateSiteSelects(){
   ['log-site'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML=opts;if(currentSiteId)el.value=currentSiteId;}});
 }
 function renderSiteList(){
-  const el=document.getElementById('site-list'); if(!el) return;
-  const q=(document.getElementById('site-search')?.value||'').trim().toLowerCase();
-
-  if(!sites.length){ el.innerHTML='<div style="color:var(--text-dim);font-size:13px">등록된 현장이 없습니다</div>'; return; }
-
-  const matched=q ? sites.filter(s=>s.name.toLowerCase().includes(q)) : sites;
-  const activeSites=matched.filter(s=>!s.is_completed);
-  const doneSites=matched.filter(s=>s.is_completed);
+  const activeEl=document.getElementById('site-list');
+  const doneEl=document.getElementById('done-site-list');
+  const aq=(document.getElementById('site-search')?.value||'').trim().toLowerCase();
+  const dq=(document.getElementById('done-site-search')?.value||'').trim().toLowerCase();
 
   function siteCard(s, isDone){
     const isSel=s.id==currentSiteId;
-    const sid=String(s.id); // uuid든 int든 문자열로 통일
+    const sid=String(s.id);
     return `<div class="site-item ${isSel?'active':''} ${isDone?'site-done':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;line-height:1.4">
             ${s.name}
             ${isSel?'<span class="site-badge">선택중</span>':''}
-            ${isDone?'<span style="display:inline-block;background:rgba(39,174,96,0.2);color:var(--green);border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">✅ 완료</span>':''}
           </div>
           <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${[s.client,s.contractor,s.start_date].filter(Boolean).join(' · ')}</div>
         </div>
@@ -2534,22 +2540,29 @@ function renderSiteList(){
     </div>`;
   }
 
-  let html='';
-  if(activeSites.length){
-    html+=activeSites.map(s=>siteCard(s,false)).join('');
-  } else if(!q){
-    html+='<div style="color:var(--text-dim);font-size:12px;padding:8px 0">진행중인 현장이 없습니다</div>';
+  // ── 진행중 현장 ──
+  if(activeEl){
+    if(!sites.length){
+      activeEl.innerHTML='<div style="color:var(--text-dim);font-size:13px">등록된 현장이 없습니다</div>';
+    } else {
+      const list=sites.filter(s=>!s.is_completed&&(!aq||s.name.toLowerCase().includes(aq)));
+      if(list.length){
+        activeEl.innerHTML=list.map(s=>siteCard(s,false)).join('');
+      } else {
+        activeEl.innerHTML=`<div style="color:var(--text-dim);font-size:12px;padding:8px 0;text-align:center">${aq?'검색 결과가 없습니다':'진행중인 현장이 없습니다'}</div>`;
+      }
+    }
   }
-  if(doneSites.length){
-    html+=`<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:8px;letter-spacing:0.5px">✅ 완료 공사 (${doneSites.length}건)</div>
-      ${doneSites.map(s=>siteCard(s,true)).join('')}
-    </div>`;
+
+  // ── 완료 공사 ──
+  if(doneEl){
+    const list=sites.filter(s=>s.is_completed&&(!dq||s.name.toLowerCase().includes(dq)));
+    if(list.length){
+      doneEl.innerHTML=list.map(s=>siteCard(s,true)).join('');
+    } else {
+      doneEl.innerHTML=`<div style="color:var(--text-dim);font-size:12px;padding:8px 0;text-align:center">${dq?'검색 결과가 없습니다':'완료된 공사가 없습니다'}</div>`;
+    }
   }
-  if(q&&!matched.length){
-    html='<div style="color:var(--text-dim);font-size:12px;padding:8px 0;text-align:center">검색 결과가 없습니다</div>';
-  }
-  el.innerHTML=html;
 }
 
 function copyVal(btn, val, label){
