@@ -117,7 +117,6 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 /* 현장 */
 .site-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px}
 .site-item.active{border-color:var(--sun);background:rgba(245,166,35,0.06)}
-.site-item.site-done{opacity:0.75;border-color:rgba(39,174,96,0.25)}
 .site-badge{display:inline-block;background:var(--sun);color:#0F2027;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:5px}
 /* 사진 */
 .photo-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center;cursor:pointer;color:var(--text-dim);font-size:13px;transition:border-color 0.2s}
@@ -175,6 +174,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 /* 사진 뷰어 */
 #photo-viewer-modal{cursor:zoom-out}
 /* PC 폰트 확대 */
+@media(min-width:768px){
 @media(min-width:768px){
   body{font-size:17px}
   .app-title{font-size:18px}
@@ -277,9 +277,10 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
 
 /* ── 달력 탭 ── */
-.cal-layout{display:flex;flex-direction:column !important;gap:18px}
-.cal-main{width:100%;max-width:100%}
-.cal-side{width:100%;max-width:100%}
+.cal-layout{display:flex;flex-direction:column;gap:14px}
+@media(min-width:800px){.cal-layout{flex-direction:row;align-items:flex-start}}
+.cal-main{flex:1.4;min-width:0}
+.cal-side{flex:1;min-width:0}
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
 .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .cal-title{font-size:15px;font-weight:700;color:var(--sun)}
@@ -315,9 +316,9 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
 
 /* ── 달력 탭 레이아웃 ── */
-.cal-layout{display:flex;flex-direction:column !important;gap:18px}
-.cal-main{width:100%;max-width:100%}
-.cal-side{width:100%;max-width:100%}
+.cal-layout{display:flex;flex-direction:column;gap:14px}
+.cal-main{width:100%}
+.cal-side{width:100%}
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
 .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .cal-title{font-size:17px;font-weight:700;color:var(--sun)}
@@ -367,26 +368,6 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .ev-badge.normal{background:rgba(41,182,246,0.12);color:#29B6F6}
 .ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
 .site-drag-handle{cursor:grab;color:var(--text-dim);user-select:none;padding:0 6px;font-size:15px;touch-action:none}
-
-/* ── 모바일 달력 전용 스타일 ── */
-@media(max-width:767px){
-  .cal-wrap{padding:7px 5px}
-  .cal-header{margin-bottom:7px}
-  .cal-title{font-size:13px}
-  .cal-nav{padding:3px 7px;font-size:11px}
-  .cal-refresh{padding:3px 7px;font-size:10px}
-  .cal-grid{gap:1px}
-  .cal-dow{font-size:10px;padding:3px 0}
-  .cal-day{min-height:0;aspect-ratio:1/1.3;padding:2px 2px;border-radius:2px;overflow:hidden;font-size:9px}
-  .cal-day-num{font-size:10px;margin-bottom:1px;line-height:1}
-  .cal-day.today .cal-day-num{font-size:11px}
-  .cal-dot{font-size:7px;padding:0 2px;margin-bottom:1px;line-height:1.45;border-radius:2px}
-  .cal-legend{gap:4px;margin-top:7px;padding-top:6px}
-  .cal-legend-item{font-size:9px}
-  .day-popup-overlay{padding:8px}
-  .day-popup{padding:14px 12px;max-height:88vh}
-  .day-popup-title{font-size:14px;margin-bottom:10px}
-}
 </style>
 </head>
 <body>
@@ -474,35 +455,20 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
     <div class="fg"><label class="fl">Anon Key</label><input type="text" class="fi" id="sb-key" placeholder="eyJh..."></div>
     <button class="btn bp bfull" onclick="saveConfig()">저장 및 연결</button>
   </div>
-  <!-- 진행중 현장 -->
   <div class="card">
     <div class="card-title">🏗️ 현장 관리</div>
-    <div style="display:flex;gap:7px;margin-bottom:12px">
-      <input type="text" class="fi" id="site-search" placeholder="현장명 검색..." oninput="renderSiteList()" style="flex:1">
-    </div>
     <div id="site-list" style="margin-bottom:14px"></div>
-    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
-      <div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:10px">+ 새 현장 추가</div>
-      <div class="fg"><label class="fl">현장명 *</label><input type="text" class="fi" id="new-site-name" placeholder="OO 태양광 발전소 설치공사"></div>
-      <div class="fr">
-        <div class="fg"><label class="fl">발주처</label><input type="text" class="fi" id="new-site-client"></div>
-        <div class="fg"><label class="fl">시공사</label><input type="text" class="fi" id="new-site-contractor"></div>
-      </div>
-      <div class="fg"><label class="fl">공사위치</label><input type="text" class="fi" id="new-site-location" placeholder="시/군/구 위치"></div>
-      <div class="fr">
-        <div class="fg"><label class="fl">착공일</label><input type="date" class="fi" id="new-site-start"></div>
-        <div class="fg"><label class="fl">준공예정일</label><input type="date" class="fi" id="new-site-end"></div>
-      </div>
-      <button class="btn bp bfull" onclick="addSite()">현장 추가</button>
+    <div class="fg"><label class="fl">현장명 *</label><input type="text" class="fi" id="new-site-name" placeholder="○○ 태양광 발전소 설치공사"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">발주처</label><input type="text" class="fi" id="new-site-client"></div>
+      <div class="fg"><label class="fl">시공사</label><input type="text" class="fi" id="new-site-contractor"></div>
     </div>
-  </div>
-  <!-- 완료 공사 별도 카드 -->
-  <div class="card">
-    <div class="card-title">✅ 완료 공사</div>
-    <div style="display:flex;gap:7px;margin-bottom:12px">
-      <input type="text" class="fi" id="done-site-search" placeholder="완료 공사 검색..." oninput="renderSiteList()" style="flex:1">
+    <div class="fg"><label class="fl">공사위치</label><input type="text" class="fi" id="new-site-location" placeholder="시/군/구 등 위치"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">착공일</label><input type="date" class="fi" id="new-site-start"></div>
+      <div class="fg"><label class="fl">준공예정일</label><input type="date" class="fi" id="new-site-end"></div>
     </div>
-    <div id="done-site-list"></div>
+    <button class="btn bp bfull" onclick="addSite()">현장 추가</button>
   </div>
 </div>
 
@@ -631,6 +597,14 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
       <div class="fg"><label class="fl">착공일</label><input type="date" class="fi" id="es-start"></div>
       <div class="fg"><label class="fl">준공예정일</label><input type="date" class="fi" id="es-end"></div>
     </div>
+    <div class="fg" style="margin-top:4px">
+      <label class="fl">공사 상태</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="es-status-label" style="font-size:13px;color:var(--text-dim)">진행중</span>
+        <button id="es-complete-btn" class="btn bg bsm" onclick="toggleSiteComplete()" style="padding:8px 16px">✅ 공사완료 처리</button>
+      </div>
+    </div>
+    <input type="hidden" id="es-is-completed" value="0">
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn bs" style="flex:1" onclick="document.getElementById('edit-site-modal').classList.remove('open')">취소</button>
       <button class="btn bp" style="flex:2" onclick="saveEditSite()">💾 저장</button>
@@ -808,10 +782,10 @@ function showConfigWarning(){
 
 async function loadAll(){
   if(!sbClient) return;
-  // 현장 복원 - id를 문자열 그대로 유지 (int/uuid 모두 호환)
+  // 현장 복원
   const sid=localStorage.getItem('sel_site_id');
   const sname=localStorage.getItem('sel_site_name');
-  if(sid&&sname){ currentSiteId=Number(sid); updateHeaderSite(sname); }
+  if(sid&&sname){ currentSiteId=parseInt(sid); updateHeaderSite(sname); }
   await Promise.all([loadWorkTypes(), loadSites()]);
   await initDateFilters();
   loadDashboard(); loadLogs(); loadSummary();
@@ -875,15 +849,23 @@ async function loadDashboard(){
   });
 
   const planHtml=buildPlanHtml(sitePlans,actualByCategory);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const calHtml=buildCalendarHtml(allLogs,allEvents,sites);
+  const evHtml=buildEventHtml(siteEvents,today);
 
-  el.innerHTML=siteCard+statsHtml+planHtml;
+  // 레이아웃: 왼쪽(통계+계획) | 오른쪽(달력+이벤트)
+  el.innerHTML=siteCard+`
+    <div class="db-layout">
+      <div class="db-main">${statsHtml}${planHtml}</div>
+      <div class="db-side">${calHtml}${evHtml}</div>
+    </div>`;
 
   const plist=document.getElementById('plan-list-sortable');
   if(plist&&window.Sortable){
     Sortable.create(plist,{handle:'.plan-drag',animation:150,
       onEnd:async()=>{
         const items=[...plist.querySelectorAll('[data-plan-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id')))));
+        await Promise.all(items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id')))));
       }
     });
   }
@@ -892,7 +874,7 @@ async function loadDashboard(){
     Sortable.create(evlist,{handle:'.ev-drag',animation:150,
       onEnd:async()=>{
         const items=[...evlist.querySelectorAll('[data-ev-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id')))));
+        await Promise.all(items.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-ev-id')))));
       }
     });
   }
@@ -930,6 +912,106 @@ function updateHeaderSite(name){
   if(!el) return;
   if(name){ el.textContent='📍 '+name; el.className='header-site'; }
   else{ el.textContent='현장을 선택하세요'; el.className='header-site empty'; }
+}
+
+// ═══════════════════════════════════════════
+// 대시보드
+// ═══════════════════════════════════════════
+async function loadDashboard(){
+  if(!sbClient) return;
+  const el=document.getElementById('dash-content');
+  const[{data:logs,error:e1},{data:plans,error:e2}]=await Promise.all([
+    sbClient.from('daily_logs').select('*'),
+    sbClient.from('work_plans').select('*').order('sort_order',{ascending:true})
+  ]);
+  if(e1){ el.innerHTML=`<div class="config-warn">⚠️ DB 오류: ${e1.message}</div>`; return; }
+
+  const allLogs=logs||[];
+  const allPlans=plans||[];
+  cachePlans(allPlans); // 수정 모달용 캐시
+
+  // 현장 필터링
+  const siteLogs=currentSiteId? allLogs.filter(l=>l.site_name===sites.find(s=>s.id===currentSiteId)?.name) : allLogs;
+  const sitePlans=currentSiteId? allPlans.filter(p=>p.site_name===sites.find(s=>s.id===currentSiteId)?.name) : allPlans;
+
+  // 날짜별 고유 인원 계산 (같은 날 같은 인원 수 중복 안 함)
+  const dateWorkerMap={};
+  siteLogs.forEach(l=>{
+    if(!dateWorkerMap[l.work_date]) dateWorkerMap[l.work_date]=l.workers||0;
+    else dateWorkerMap[l.work_date]=Math.max(dateWorkerMap[l.work_date],l.workers||0);
+  });
+  const totalWorkers=Object.values(dateWorkerMap).reduce((s,v)=>s+v,0);
+  const totalMd=siteLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
+  const totalDays=new Set(siteLogs.map(l=>l.work_date)).size;
+  const recent7=new Set(siteLogs.filter(l=>(new Date()-new Date(l.work_date))/86400000<=7).map(l=>l.work_date)).size;
+
+  // 현장 카드
+  const selSite=sites.find(s=>s.id===currentSiteId);
+  const siteCard=selSite?`
+    <div class="card" style="border-color:rgba(245,166,35,0.5);margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--sun);margin-bottom:5px">${selSite.name}</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.9">
+            ${selSite.client?'발주처: '+selSite.client+'<br>':''}
+            ${selSite.contractor?'시공사: '+selSite.contractor+'<br>':''}
+            ${selSite.start_date?'착공: '+selSite.start_date+(selSite.end_date?' ~ 준공: '+selSite.end_date:''):''}
+          </div>
+        </div>
+        <button class="btn bs bsm" onclick="switchTab('settings')">관리</button>
+      </div>
+    </div>`
+    :'<div class="config-warn" style="margin-bottom:14px">🏗️ 설정 탭에서 현장을 선택해주세요</div>';
+
+  // 예상 총 M/D (계획 합산)
+  const plannedTotal=sitePlans.reduce((s,p)=>s+parseFloat(p.planned_manday||0),0);
+  const remainMd=plannedTotal-totalMd;
+  const remainColor=remainMd<0?'var(--red)':'#29B6F6';
+
+  // 통계
+  const statsHtml=`
+    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat-card" style="border-color:rgba(245,166,35,0.4)">
+        <div class="stat-val">${plannedTotal.toFixed(2)}</div>
+        <div class="stat-lbl">예상 총 M/D</div>
+      </div>
+      <div class="stat-card" style="border-color:rgba(41,182,246,0.4)">
+        <div class="stat-val" style="color:#29B6F6">${totalMd.toFixed(2)}</div>
+        <div class="stat-lbl">현재 M/D</div>
+      </div>
+      <div class="stat-card" style="border-color:${remainMd<0?'rgba(231,76,60,0.4)':'rgba(41,182,246,0.2)'}">
+        <div class="stat-val" style="color:${remainColor}">${Math.abs(remainMd).toFixed(2)}${remainMd<0?' ▲':' ▼'}</div>
+        <div class="stat-lbl">${remainMd<0?'초과 M/D':'남은 M/D'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${totalDays}</div>
+        <div class="stat-lbl">작업일수</div>
+      </div>
+    </div>`;
+
+  // 대분류별 실제 맨데이 자동 집계 (작업일지 DB 기준)
+  const actualByCategory={};
+  siteLogs.forEach(l=>{
+    if(!actualByCategory[l.category]) actualByCategory[l.category]=0;
+    actualByCategory[l.category]+=parseFloat(l.manday||0);
+  });
+
+  // 작업 계획 vs 실적
+  const planHtml=buildPlanHtml(sitePlans, actualByCategory);
+
+  el.innerHTML=siteCard+statsHtml+planHtml;
+  // 계획 순서 드래그 초기화
+  const plist=document.getElementById('plan-list-sortable');
+  if(plist&&window.Sortable){
+    Sortable.create(plist,{
+      handle:'.plan-drag',animation:150,
+      onEnd:async()=>{
+        const items=[...plist.querySelectorAll('[data-plan-id]')];
+        const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id'))));
+        await Promise.all(updates);
+      }
+    });
+  }
 }
 
 // ── 계획 ──
@@ -1024,7 +1106,7 @@ async function savePlanAll(){
     const{error}=await sbClient.from('work_plans').update({
       site_name:siteName, category:cat, planned_manday:md,
       note:document.getElementById(`prn-${rid}`)?.value||''
-    }).eq('id',Number(editId));
+    }).eq('id',editId);
     if(error){ toast('수정 실패','err'); return; }
     toast('계획 수정됨 ✓','ok');
   } else {
@@ -1050,7 +1132,7 @@ async function savePlanAll(){
 
 async function deletePlan(id){
   if(!confirm('계획을 삭제할까요?')) return;
-  await sbClient.from('work_plans').delete().eq('id',Number(id));
+  await sbClient.from('work_plans').delete().eq('id',id);
   toast('삭제됨','ok'); loadDashboard();
 }
 
@@ -1058,7 +1140,7 @@ async function revertPlan(id){
   if(!confirm('완료를 취소하고 작업중으로 되돌릴까요?')) return;
   const{error}=await sbClient.from('work_plans').update({
     is_completed:false, completed_at:null
-  }).eq('id',Number(id));
+  }).eq('id',id);
   if(error){ toast('변경 실패: '+error.message,'err'); return; }
   toast('작업중으로 변경됨 ✓','ok'); loadDashboard();
 }
@@ -1102,7 +1184,7 @@ async function loadCalendarTab(){
     if(window.Sortable) Sortable.create(evlist,{handle:'.ev-drag',animation:150,
       onEnd:async()=>{
         const allItems=[...document.querySelectorAll('[data-ev-id]')];
-        await Promise.all(allItems.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',Number(el.getAttribute('data-ev-id')))));
+        await Promise.all(allItems.map((el,i)=>sbClient.from('events').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-ev-id')))));
       }
     });
   });
@@ -1111,7 +1193,7 @@ async function loadCalendarTab(){
     Sortable.create(siteGroups,{handle:'.site-drag-handle',animation:150,
       onEnd:async()=>{
         const items=[...siteGroups.querySelectorAll('[data-site-id]')];
-        await Promise.all(items.map((el,i)=>sbClient.from('sites').update({sort_order:i}).eq('id',Number(el.getAttribute('data-site-id')))));
+        await Promise.all(items.map((el,i)=>sbClient.from('sites').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-site-id')))));
       }
     });
   }
@@ -1152,14 +1234,13 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
     const isToday=new Date(y,m,d).getTime()===today.getTime();
     const dayLogs=logMap[ds]||[], dayEvs=evMap[ds]||[];
     let bars='';
-    const isMobile=window.innerWidth<768;
     siteRanges.forEach(sr=>{
       if(ds>=sr.start&&ds<=sr.end){
         const isS=ds===sr.start,isE=ds===sr.end;
         if(isS||isE){
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px;filter:brightness(1.4);box-shadow:0 0 4px rgba(255,255,255,0.2)">${isS?'▶'+sr.name.slice(0,isMobile?3:5):(isMobile?'■종':'■종료')}</span>`;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:8px;filter:brightness(1.4);box-shadow:0 0 4px rgba(255,255,255,0.2)">${isS?'▶'+sr.name.slice(0,5):'■종료'}</span>`;
         } else {
-          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 ${isMobile?1:3}px;opacity:0.65">─</span>`;
+          bars+=`<span class="cal-dot ${sr.cls}" style="font-size:7px;padding:0 3px;opacity:0.65">─</span>`;
         }
       }
     });
@@ -1167,11 +1248,11 @@ function buildCalendarHtml(allLogs, allEvents, allSites){
     if(dayLogs.length){
       const total=dayLogs.reduce((s,l)=>s+parseFloat(l.manday||0),0);
       const sn=dayLogs[0].site_name||'';
-      logDot=`<span class="cal-dot work">${sn?sn.slice(0,isMobile?2:4)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
+      logDot=`<span class="cal-dot work">${sn?sn.slice(0,4)+' ':''}<b style="color:var(--sun)">${total.toFixed(1)}</b></span>`;
     }
-    const evDots=dayEvs.slice(0,isMobile?1:2).map(e=>{
+    const evDots=dayEvs.slice(0,2).map(e=>{
       const ec=siteEvClsMap[e.site_name]||'ev-dot';
-      return `<span class="cal-dot ${ec}${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''}${e.title}">${e.title.slice(0,isMobile?3:6)}</span>`;
+      return `<span class="cal-dot ${ec}${e.is_completed?' done':''}" title="${e.site_name?e.site_name+': ':''}${e.title}">${e.title.slice(0,6)}</span>`;
     }).join('');
     const hasWork=dayLogs.length?'has-work':'';
     cells+=`<div class="cal-day${isToday?' today':''} ${hasWork}" onclick="openDayPopup('${ds}')">`
@@ -1356,7 +1437,7 @@ async function saveEvent(){
   };
   const editId=document.getElementById('ev-edit-id').value;
   const{error}=editId
-    ? await sbClient.from('events').update(payload).eq('id',Number(editId))
+    ? await sbClient.from('events').update(payload).eq('id',editId)
     : await sbClient.from('events').insert(payload);
   if(error){ toast('저장 실패: '+error.message,'err'); return; }
   document.getElementById('event-modal').classList.remove('open');
@@ -1365,16 +1446,16 @@ async function saveEvent(){
 }
 async function deleteEvent(id){
   if(!confirm('이벤트를 삭제할까요?')) return;
-  await sbClient.from('events').delete().eq('id',Number(id));
+  await sbClient.from('events').delete().eq('id',id);
   toast('삭제됨','ok'); loadCalendarTab();
 }
 async function completeEvent(id){
   const today=new Date().toISOString().split('T')[0];
-  await sbClient.from('events').update({is_completed:true,completed_at:today}).eq('id',Number(id));
+  await sbClient.from('events').update({is_completed:true,completed_at:today}).eq('id',id);
   toast('완료 처리됨 ✓','ok'); loadCalendarTab();
 }
 async function revertEvent(id){
-  await sbClient.from('events').update({is_completed:false,completed_at:null}).eq('id',Number(id));
+  await sbClient.from('events').update({is_completed:false,completed_at:null}).eq('id',id);
   toast('예정으로 되돌림 ✓','ok'); loadCalendarTab();
 }
 
@@ -1460,10 +1541,10 @@ async function saveComplete(){
   const plist=document.getElementById('plan-list-sortable');
   if(plist){
     const items=[...plist.querySelectorAll('[data-plan-id]')];
-    const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',Number(el.getAttribute('data-plan-id'))));
+    const updates=items.map((el,i)=>sbClient.from('work_plans').update({sort_order:i}).eq('id',parseInt(el.getAttribute('data-plan-id'))));
     await Promise.all(updates);
   }
-  const{error}=await sbClient.from('work_plans').update({is_completed:true, completed_at:today}).eq('id',Number(planId));
+  const{error}=await sbClient.from('work_plans').update({is_completed:true, completed_at:today}).eq('id',planId);
   if(error){ toast('오류 발생','err'); return; }
   document.getElementById('complete-modal').classList.remove('open');
   toast('완료 처리됨 ✓ ('+today+')','ok'); loadDashboard();
@@ -1887,13 +1968,13 @@ async function uploadCatPhotos(logId,cid){
   if(!rowPhotos[key]||!rowPhotos[key].filter(p=>p).length) return;
   const files=rowPhotos[key].filter(p=>p);
   for(const f of files){
-    // 파일 확장자 안전하게 처리
-    const nameParts=f.name.split('.');
-    const ext=nameParts.length>1?nameParts.pop().toLowerCase():'jpg';
-    const safeExt=['jpg','jpeg','png','gif','webp','heic','heif'].includes(ext)?ext:'jpg';
-    const path=`${logId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${safeExt}`;
-    const{data:upData, error:upErr}=await sbClient.storage.from('worklog-photos').upload(path,f,{
-      contentType: f.type||'image/jpeg',
+    const compressed = await compressImage(f);
+    const origKB = Math.round(f.size/1024);
+    const compKB  = Math.round(compressed.size/1024);
+    console.log(`📷 압축: ${f.name} ${origKB}KB → ${compKB}KB`);
+    const path=`${logId}/${Date.now()}_${Math.random().toString(36).slice(2)}.webp`;
+    const{error:upErr}=await sbClient.storage.from('worklog-photos').upload(path, compressed,{
+      contentType: 'image/webp',
       upsert: false
     });
     if(upErr){
@@ -1910,6 +1991,47 @@ async function uploadCatPhotos(logId,cid){
       }
     }
   }
+}
+
+// ═══════════════════════════════════════════
+// 사진 최적화 (Canvas 리사이즈 + WebP 변환)
+// ═══════════════════════════════════════════
+const IMG_MAX_PX = 1920;   // 긴 변 최대 픽셀
+const IMG_QUALITY = 0.82;  // WebP 품질 (0~1)
+
+async function compressImage(file){
+  // HEIC/HEIF 등 Canvas가 디코딩 못하는 포맷은 원본 반환
+  const type = file.type || '';
+  if(type === 'image/gif') return file; // GIF 애니 유지
+
+  return new Promise(resolve=>{
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.naturalWidth, h = img.naturalHeight;
+        // 리사이즈 필요 여부
+        if(w > IMG_MAX_PX || h > IMG_MAX_PX){
+          if(w >= h){ h = Math.round(h * IMG_MAX_PX / w); w = IMG_MAX_PX; }
+          else       { w = Math.round(w * IMG_MAX_PX / h); h = IMG_MAX_PX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob=>{
+          if(!blob){ resolve(file); return; } // 실패 시 원본
+          // 원본보다 커졌으면 원본 사용
+          const result = blob.size < file.size ? blob : file;
+          resolve(result);
+        }, 'image/webp', IMG_QUALITY);
+      };
+      img.onerror = ()=> resolve(file);
+      img.src = ev.target.result;
+    };
+    reader.onerror = ()=> resolve(file);
+    reader.readAsDataURL(file);
+  });
 }
 
 // 구버전 호환 (사용 안 하지만 참조 오류 방지)
@@ -1941,9 +2063,11 @@ function removeRowPhoto(idx,pidx,el){ if(rowPhotos[idx]) rowPhotos[idx][pidx]=nu
 async function uploadRowPhotos(logId, idx){
   if(!rowPhotos[idx]) return;
   for(const f of rowPhotos[idx].filter(p=>p)){
-    const ext=f.name.split('.').pop();
-    const path=`${logId}/${Date.now()}.${ext}`;
-    const{error}=await sbClient.storage.from('worklog-photos').upload(path,f);
+    const compressed = await compressImage(f);
+    const path=`${logId}/${Date.now()}_${Math.random().toString(36).slice(2)}.webp`;
+    const{error}=await sbClient.storage.from('worklog-photos').upload(path, compressed,{
+      contentType:'image/webp', upsert:false
+    });
     if(!error){
       const{data:u}=sbClient.storage.from('worklog-photos').getPublicUrl(path);
       await sbClient.from('photos').insert({log_id:logId, url:u.publicUrl});
@@ -2014,7 +2138,7 @@ function syncAllSubHours(){
 
 async function openEditLog(id){
   // 클릭한 레코드 기준으로 같은 날짜 전체 레코드 불러오기
-  const{data:clicked}=await sbClient.from('daily_logs').select('work_date,site_name').eq('id',Number(id)).single();
+  const{data:clicked}=await sbClient.from('daily_logs').select('work_date,site_name').eq('id',id).single();
   if(!clicked) return;
   const{data:allLogs}=await sbClient.from('daily_logs')
     .select('*,photos(*)')
@@ -2060,20 +2184,18 @@ async function openEditLog(id){
     addCatBlock({category:cat, subs});
   });
 
-  // 각 대분류 카드에 기존 사진 표시 + 기존 photo ID 저장 (수정 시 보존용)
-  window._editExistingPhotos={};
+  // 각 대분류 카드에 기존 사진 표시
   setTimeout(()=>{
     catOrder.forEach((cat,ci)=>{
-      const cid=ci+1;
+      const cid=ci+1; // catBlockCount는 addCatBlock 호출 순서
       const recs=catMap[cat];
       const allPhotos=recs.flatMap(l=>l.photos||[]);
       const pgEl=document.getElementById('cbpg-'+cid);
       if(!pgEl||!allPhotos.length) return;
-      window._editExistingPhotos['cat-'+cid]=allPhotos.map(p=>p.id);
       allPhotos.forEach(p=>{
         const div=document.createElement('div'); div.className='photo-item';
         div.innerHTML='<img src="'+p.url+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px">'
-          +'<button class="photo-rm" onclick="deleteExistingPhoto('+p.id+',this.parentNode,\'cat-'+cid+'\')">✕</button>';
+          +'<button class="photo-rm" onclick="deleteExistingPhoto('+p.id+',this.parentNode)">✕</button>';
         pgEl.appendChild(div);
       });
     });
@@ -2087,17 +2209,14 @@ async function openEditLog(id){
 }
 
 
-async function deleteExistingPhoto(photoId, el, key){
-  const{error}=await sbClient.from('photos').delete().eq('id',Number(photoId));
+async function deleteExistingPhoto(photoId, el){
+  const{error}=await sbClient.from('photos').delete().eq('id',photoId);
   if(error){ toast('사진 삭제 실패','err'); return; }
   el?.remove();
-  if(key&&window._editExistingPhotos&&window._editExistingPhotos[key]){
-    window._editExistingPhotos[key]=window._editExistingPhotos[key].filter(id=>id!==photoId);
-  }
   toast('사진 삭제됨','ok');
 }
 
-function closeLogModal(){ document.getElementById('log-modal').classList.remove('open'); window._editExistingPhotos={}; }
+function closeLogModal(){ document.getElementById('log-modal').classList.remove('open'); }
 
 async function saveLog(){
   const date=document.getElementById('log-date').value;
@@ -2141,17 +2260,12 @@ async function saveLog(){
   if(editId && editId.startsWith('SUB:')){
     // 소분류 단건 수정
     const subId=editId.replace('SUB:','');
-    const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',Number(subId));
+    const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',subId);
     if(error){ toast('수정 실패: '+error.message,'err'); return; }
     for(const pm of photoMap){ if(pm.pIdx===0) await uploadCatPhotos(subId,pm.cid); }
   } else if(editId && editId.startsWith('DATE:')){
-    // 날짜 전체 수정: 기존 사진 보존
+    // 날짜 전체 수정: 삭제 후 재삽입
     const editDate=editId.replace('DATE:','');
-    const existingPhotoMap=window._editExistingPhotos||{};
-    const allExistingPhotoIds=Object.values(existingPhotoMap).flat();
-    if(allExistingPhotoIds.length){
-      await sbClient.from('photos').update({log_id:null}).in('id',allExistingPhotoIds);
-    }
     const{error:delErr}=await sbClient.from('daily_logs').delete().eq('work_date',editDate);
     if(delErr){ toast('수정 실패: '+delErr.message,'err'); return; }
     const insertedIds=[];
@@ -2160,16 +2274,7 @@ async function saveLog(){
       if(error){ toast('저장 실패: '+error.message,'err'); return; }
       insertedIds.push(data.id);
     }
-    for(const pm of photoMap){
-      const key='cat-'+pm.cid;
-      const existingIds=existingPhotoMap[key]||[];
-      const newLogId=insertedIds[pm.pIdx];
-      if(existingIds.length&&newLogId){
-        await sbClient.from('photos').update({log_id:newLogId}).in('id',existingIds);
-      }
-      await uploadCatPhotos(newLogId,pm.cid);
-    }
-    window._editExistingPhotos={};
+    for(const pm of photoMap){ await uploadCatPhotos(insertedIds[pm.pIdx],pm.cid); }
   } else {
     const insertedIds=[];
     for(let i=0;i<payloads.length;i++){
@@ -2189,7 +2294,7 @@ async function saveLog(){
 
 async function deleteLog(id){
   if(!confirm('삭제할까요?')) return;
-  await sbClient.from('daily_logs').delete().eq('id',Number(id));
+  await sbClient.from('daily_logs').delete().eq('id',id);
   toast('삭제됨','ok'); initDateFilters().then(()=>{ loadLogs(); loadDashboard(); loadSummary(); });
 }
 
@@ -2337,7 +2442,7 @@ function renderWorkTypeList(){
       const ups=[];
       cards.forEach((c,i)=>{
         const cat=c.getAttribute('data-cat');
-        workTypes.filter(w=>w.category===cat).forEach(w=>ups.push(sbClient.from('work_types').update({sort_order:i*100+w.sort_order%100}).eq('id',Number(w.id))));
+        workTypes.filter(w=>w.category===cat).forEach(w=>ups.push(sbClient.from('work_types').update({sort_order:i*100+w.sort_order%100}).eq('id',w.id)));
       });
       await Promise.all(ups); await loadWorkTypes();
     }});
@@ -2346,7 +2451,7 @@ function renderWorkTypeList(){
         const items=[...sl.querySelectorAll('[data-id]')];
         const cat=sl.getAttribute('data-cat');
         const base=Math.floor((workTypes.find(w=>w.category===cat)?.sort_order||0)/100)*100;
-        const ups=items.map((item,i)=>sbClient.from('work_types').update({sort_order:base+i+1}).eq('id',Number(item.getAttribute('data-id'))));
+        const ups=items.map((item,i)=>sbClient.from('work_types').update({sort_order:base+i+1}).eq('id',parseInt(item.getAttribute('data-id'))));
         await Promise.all(ups); await loadWorkTypes();
       }});
     });
@@ -2376,7 +2481,7 @@ async function addSubCategory(){
   document.getElementById('sub-modal').classList.remove('open');
   await loadWorkTypes(); toast('소분류 추가됨 ✓','ok');
 }
-async function deleteWorkType(id){ if(!confirm('삭제할까요?')) return; await sbClient.from('work_types').delete().eq('id',Number(id)); await loadWorkTypes(); toast('삭제됨','ok'); }
+async function deleteWorkType(id){ if(!confirm('삭제할까요?')) return; await sbClient.from('work_types').delete().eq('id',id); await loadWorkTypes(); toast('삭제됨','ok'); }
 async function deleteCategory(cat){ if(!confirm(`'${cat}' 전체를 삭제할까요?`)) return; await sbClient.from('work_types').delete().eq('category',cat); await loadWorkTypes(); toast('삭제됨','ok'); }
 function openEditCat(cat){ document.getElementById('en-id').value=''; document.getElementById('en-type').value='cat'; document.getElementById('en-old').value=cat; document.getElementById('en-val').value=cat; document.getElementById('edit-name-modal').classList.add('open'); setTimeout(()=>document.getElementById('en-val').focus(),100); }
 function openEditSub(id,name){ document.getElementById('en-id').value=id; document.getElementById('en-type').value='sub'; document.getElementById('en-old').value=name; document.getElementById('en-val').value=name; document.getElementById('edit-name-modal').classList.add('open'); setTimeout(()=>document.getElementById('en-val').focus(),100); }
@@ -2385,7 +2490,7 @@ async function saveNameEdit(){
   const oldV=document.getElementById('en-old').value, newV=document.getElementById('en-val').value.trim();
   if(!newV){ toast('이름을 입력하세요','err'); return; }
   if(type==='cat') await sbClient.from('work_types').update({category:newV}).eq('category',oldV);
-  else await sbClient.from('work_types').update({sub_category:newV}).eq('id',Number(id));
+  else await sbClient.from('work_types').update({sub_category:newV}).eq('id',id);
   document.getElementById('edit-name-modal').classList.remove('open');
   await loadWorkTypes(); toast('수정됨 ✓','ok');
 }
@@ -2404,58 +2509,35 @@ function populateSiteSelects(){
   ['log-site'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML=opts;if(currentSiteId)el.value=currentSiteId;}});
 }
 function renderSiteList(){
-  const activeEl=document.getElementById('site-list');
-  const doneEl=document.getElementById('done-site-list');
-  const aq=(document.getElementById('site-search')?.value||'').trim().toLowerCase();
-  const dq=(document.getElementById('done-site-search')?.value||'').trim().toLowerCase();
-
-  function siteCard(s, isDone){
-    const isSel=Number(s.id)===Number(currentSiteId);
-    const sid=String(s.id);
-    return `<div class="site-item ${isSel?'active':''} ${isDone?'site-done':''}">
+  const el=document.getElementById('site-list'); if(!el) return;
+  if(!sites.length){ el.innerHTML='<div style="color:var(--text-dim);font-size:13px">등록된 현장이 없습니다</div>'; return; }
+  el.innerHTML=sites.map(s=>{
+    const isSel=s.id===currentSiteId||s.id==currentSiteId;
+    const sn=s.name.replace(/'/g,"\\'");
+    const infoRows=[
+      {label:'공사명',   val:s.name||''},
+      {label:'발주처',   val:s.client||''},
+      {label:'시공사',   val:s.contractor||''},
+      {label:'공사위치', val:s.location||''},
+      {label:'착공일',   val:s.start_date||''},
+      {label:'준공예정', val:s.end_date||''},
+    ];
+    const copyTable='';
+    return `<div class="site-item ${isSel?'active':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;line-height:1.4">
-            ${s.name}
-            ${isSel?'<span class="site-badge">선택중</span>':''}
-          </div>
+        <div>
+          <div style="font-size:13px;font-weight:700">${s.name}${isSel?'<span class="site-badge">선택중</span>':''}${s.is_completed?'<span style="display:inline-block;background:rgba(39,174,96,0.2);color:var(--green);border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">✅ 완료</span>':''}</div>
           <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${[s.client,s.contractor,s.start_date].filter(Boolean).join(' · ')}</div>
         </div>
-        <div style="display:flex;gap:4px;margin-left:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-          ${!isSel&&!isDone?`<button class="btn bp bsm" onclick="selectSite('${sid}')">선택</button>`:''}
-          ${!isDone
-            ?`<button class="btn bg bsm" onclick="completeSite('${sid}')">✅완료</button>`
-            :`<button class="btn bs bsm" onclick="revertSite('${sid}')">🔄복구</button>`}
-          <button class="btn bs bsm" onclick="openEditSite('${sid}')">수정</button>
-          <button class="btn bd bsm" onclick="deleteSite('${sid}')">삭제</button>
+        <div style="display:flex;gap:5px;margin-left:8px">
+          ${!isSel?`<button class="btn bp bsm" onclick="selectSite(${s.id},'${sn}')">선택</button>`:''}
+          <button class="btn bs bsm" onclick="openEditSite(${s.id})">수정</button>
+          <button class="btn bd bsm" onclick="deleteSite(${s.id})">삭제</button>
         </div>
       </div>
+
     </div>`;
-  }
-
-  // ── 진행중 현장 ──
-  if(activeEl){
-    if(!sites.length){
-      activeEl.innerHTML='<div style="color:var(--text-dim);font-size:13px">등록된 현장이 없습니다</div>';
-    } else {
-      const list=sites.filter(s=>!s.is_completed&&(!aq||s.name.toLowerCase().includes(aq)));
-      if(list.length){
-        activeEl.innerHTML=list.map(s=>siteCard(s,false)).join('');
-      } else {
-        activeEl.innerHTML=`<div style="color:var(--text-dim);font-size:12px;padding:8px 0;text-align:center">${aq?'검색 결과가 없습니다':'진행중인 현장이 없습니다'}</div>`;
-      }
-    }
-  }
-
-  // ── 완료 공사 ──
-  if(doneEl){
-    const list=sites.filter(s=>s.is_completed&&(!dq||s.name.toLowerCase().includes(dq)));
-    if(list.length){
-      doneEl.innerHTML=list.map(s=>siteCard(s,true)).join('');
-    } else {
-      doneEl.innerHTML=`<div style="color:var(--text-dim);font-size:12px;padding:8px 0;text-align:center">${dq?'검색 결과가 없습니다':'완료된 공사가 없습니다'}</div>`;
-    }
-  }
+  }).join('');
 }
 
 function copyVal(btn, val, label){
@@ -2484,15 +2566,16 @@ function copyAllSiteInfo(id){
     toast('전체 복사됨 ✓  엑셀 C4에 붙여넣기!','ok');
   });
 }
-function selectSite(id){
-  const s=sites.find(x=>x.id==id); if(!s) return;
-  currentSiteId=Number(s.id);
-  localStorage.setItem('sel_site_id', String(s.id));
-  localStorage.setItem('sel_site_name', s.name);
-  updateHeaderSite(s.name);
+function selectSite(id,name){
+  currentSiteId=parseInt(id);
+  localStorage.setItem('sel_site_id',id);
+  localStorage.setItem('sel_site_name',name);
+  updateHeaderSite(name);
   renderSiteList(); populateSiteSelects();
-  initDateFilters().then(()=>{ loadDashboard(); loadLogs(); loadSummary(); });
-  toast(s.name+' 선택됨 ✓','ok');
+  initDateFilters().then(()=>{
+    loadDashboard(); loadLogs(); loadSummary();
+  });
+  toast(name+' 선택됨 ✓','ok');
 }
 async function addSite(){
   const name=document.getElementById('new-site-name').value.trim();
@@ -2523,12 +2606,12 @@ async function addSite(){
 }
 async function deleteSite(id){
   if(!confirm('현장을 삭제할까요?')) return;
-  if(Number(id)===Number(currentSiteId)){ currentSiteId=null; localStorage.removeItem('sel_site_id'); localStorage.removeItem('sel_site_name'); updateHeaderSite(null); }
-  await sbClient.from('sites').delete().eq('id',Number( Number(id)));
+  if(id==currentSiteId){ currentSiteId=null; localStorage.removeItem('sel_site_id'); localStorage.removeItem('sel_site_name'); updateHeaderSite(null); }
+  await sbClient.from('sites').delete().eq('id',id);
   await loadSites(); toast('삭제됨','ok');
 }
 function openEditSite(id){
-  const s=sites.find(x=>x.id==id); if(!s) return;
+  const s=sites.find(x=>x.id===id); if(!s) return;
   document.getElementById('es-id').value=s.id;
   document.getElementById('es-name').value=s.name||'';
   document.getElementById('es-client').value=s.client||'';
@@ -2536,13 +2619,39 @@ function openEditSite(id){
   document.getElementById('es-location').value=s.location||'';
   document.getElementById('es-start').value=s.start_date||'';
   document.getElementById('es-end').value=s.end_date||'';
+  // 공사 완료 상태
+  const isComp=s.is_completed?true:false;
+  document.getElementById('es-is-completed').value=isComp?'1':'0';
+  const statusLabel=document.getElementById('es-status-label');
+  const completeBtn=document.getElementById('es-complete-btn');
+  if(isComp){
+    statusLabel.textContent='✅ 공사완료'; statusLabel.style.color='var(--green)';
+    completeBtn.textContent='🔄 작업중으로 되돌리기'; completeBtn.className='btn bs bsm'; completeBtn.style.padding='8px 16px';
+  } else {
+    statusLabel.textContent='진행중'; statusLabel.style.color='var(--text-dim)';
+    completeBtn.textContent='✅ 공사완료 처리'; completeBtn.className='btn bg bsm'; completeBtn.style.padding='8px 16px';
+  }
   document.getElementById('edit-site-modal').classList.add('open');
+}
+function toggleSiteComplete(){
+  const cur=document.getElementById('es-is-completed').value==='1';
+  const next=!cur;
+  document.getElementById('es-is-completed').value=next?'1':'0';
+  const statusLabel=document.getElementById('es-status-label');
+  const completeBtn=document.getElementById('es-complete-btn');
+  if(next){
+    statusLabel.textContent='✅ 공사완료'; statusLabel.style.color='var(--green)';
+    completeBtn.textContent='🔄 작업중으로 되돌리기'; completeBtn.className='btn bs bsm'; completeBtn.style.padding='8px 16px';
+  } else {
+    statusLabel.textContent='진행중'; statusLabel.style.color='var(--text-dim)';
+    completeBtn.textContent='✅ 공사완료 처리'; completeBtn.className='btn bg bsm'; completeBtn.style.padding='8px 16px';
+  }
 }
 async function saveEditSite(){
   const id=document.getElementById('es-id').value;
   const name=document.getElementById('es-name').value.trim();
   if(!name){ toast('현장명을 입력하세요','err'); return; }
-  const s=sites.find(x=>x.id==id)||{};
+  const isCompleted=document.getElementById('es-is-completed').value==='1';
   const{error}=await sbClient.from('sites').update({
     name,
     client:document.getElementById('es-client').value.trim(),
@@ -2550,26 +2659,12 @@ async function saveEditSite(){
     location:document.getElementById('es-location').value.trim(),
     start_date:document.getElementById('es-start').value||null,
     end_date:document.getElementById('es-end').value||null,
-    is_completed:s.is_completed||false
-  }).eq('id',Number( Number(id)));
-  if(error){ toast('수정 실패: '+error.message,'err'); return; }
-  if(Number(id)===Number(currentSiteId)){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
+    is_completed:isCompleted
+  }).eq('id',id);
+  if(error){ toast('수정 실패','err'); return; }
+  if(id==currentSiteId){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
   document.getElementById('edit-site-modal').classList.remove('open');
   await loadSites(); toast('수정됨 ✓','ok');
-}
-async function completeSite(id){
-  const s=sites.find(x=>x.id==id); if(!s) return;
-  if(!confirm(`'${s.name}'\n공사완료 처리하시겠습니까?\n\n완료된 현장은 달력에서 표시되지 않습니다.`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:true}).eq('id',Number( Number(s.id)));
-  if(error){ toast('처리 실패: '+error.message,'err'); return; }
-  await loadSites(); toast(s.name+' 공사완료 처리됨 ✓','ok');
-}
-async function revertSite(id){
-  const s=sites.find(x=>x.id==id); if(!s) return;
-  if(!confirm(`'${s.name}'\n작업중으로 되돌리시겠습니까?`)) return;
-  const{error}=await sbClient.from('sites').update({is_completed:false}).eq('id',Number( Number(s.id)));
-  if(error){ toast('처리 실패: '+error.message,'err'); return; }
-  await loadSites(); toast(s.name+' 진행중으로 변경됨 ✓','ok');
 }
 
 // ═══════════════════════════════════════════
@@ -2867,7 +2962,7 @@ function closePhotoViewer(){
 // 사진 내보내기 (zip 없이 순차 다운로드)
 // 소분류 단건 수정 모달
 async function openEditSubLog(id){
-  const{data:l}=await sbClient.from('daily_logs').select('*').eq('id',Number(id)).single();
+  const{data:l}=await sbClient.from('daily_logs').select('*').eq('id',id).single();
   if(!l) return;
   document.getElementById('log-modal-title').textContent='✏️ 소분류 수정';
   document.getElementById('log-edit-group').value='SUB:'+id;
