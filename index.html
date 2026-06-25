@@ -248,77 +248,12 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .cal-dot.site2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
 .cal-dot.site3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
 .cal-dot.site-s{font-weight:900}
-/* s0~s4 (달력 탭용 - 모바일에도 동일하게 밝게) */
-.cal-dot.s0{background:rgba(46,184,92,0.28);color:rgba(120,230,150,1);font-weight:700}
-.cal-dot.s1{background:rgba(180,110,220,0.28);color:rgba(210,160,255,1);font-weight:700}
-.cal-dot.s2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
-.cal-dot.s3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
-.cal-dot.s4{background:rgba(230,126,34,0.28);color:rgba(255,180,80,1);font-weight:700}
-.cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
-.cal-dot.ev-dot.done{opacity:0.4}
-.cal-dot.ev-s0{background:rgba(46,184,92,0.9);color:#fff;font-weight:900}
-.cal-dot.ev-s1{background:rgba(155,89,182,0.9);color:#fff;font-weight:900}
-.cal-dot.ev-s2{background:rgba(231,76,60,0.85);color:#fff;font-weight:900}
-.cal-dot.ev-s3{background:rgba(52,152,219,0.9);color:#fff;font-weight:900}
-.cal-dot.ev-s4{background:rgba(230,126,34,0.9);color:#fff;font-weight:900}
-.cal-dot.ev-s0.done,.cal-dot.ev-s1.done,.cal-dot.ev-s2.done,.cal-dot.ev-s3.done,.cal-dot.ev-s4.done{opacity:0.4}
-/* ── 이벤트 ── */
-.ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;margin-bottom:7px;position:relative}
-.ev-item.ev-done{opacity:0.5}
-.ev-item.ev-urgent{border-left:3px solid var(--red)}
-.ev-item.ev-soon{border-left:3px solid var(--sun)}
-.ev-item.ev-normal{border-left:3px solid #29B6F6}
-.ev-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
-.ev-meta{font-size:11px;color:var(--text-dim);margin-bottom:4px}
-.ev-badge{display:inline-flex;align-items:center;border-radius:10px;padding:2px 7px;font-size:11px;font-weight:700}
-.ev-badge.urgent{background:rgba(231,76,60,0.15);color:var(--red)}
-.ev-badge.soon{background:rgba(245,166,35,0.15);color:var(--sun)}
-.ev-badge.normal{background:rgba(41,182,246,0.12);color:#29B6F6}
-.ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
-
-/* ── 달력 탭 ── */
-.cal-layout{display:flex;flex-direction:column;gap:14px}
-@media(min-width:800px){.cal-layout{flex-direction:row;align-items:flex-start}}
-.cal-main{flex:1.4;min-width:0}
-.cal-side{flex:1;min-width:0}
-.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
-.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.cal-title{font-size:15px;font-weight:700;color:var(--sun)}
-.cal-nav{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 11px;cursor:pointer;font-size:13px}
-.cal-nav:hover{border-color:var(--sun);color:var(--sun)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text-dim);padding:4px 0}
-.cal-dow:first-child{color:#e74c3c}.cal-dow:last-child{color:#3498db}
-.cal-day{min-height:56px;background:var(--sky-dark);border-radius:4px;padding:3px 4px;font-size:10px;cursor:pointer;transition:background 0.15s}
-.cal-day:hover{background:rgba(255,255,255,0.06)}
-.cal-day.other-month{opacity:0.25}
-.cal-day.today{background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.5)}
-.cal-day-num{font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:2px}
-.cal-day.today .cal-day-num{color:var(--sun)}
-.cal-dot{border-radius:2px;padding:1px 4px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px;display:block}
-.cal-dot.work{background:rgba(41,182,246,0.2);color:#29B6F6}
-.cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
-.cal-dot.ev-dot.done{opacity:0.4}
-.cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.cal-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim)}
-/* ── 이벤트 ── */
-.ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:8px}
-.ev-item.ev-urgent{border-left:3px solid var(--red)}
-.ev-item.ev-soon{border-left:3px solid var(--sun)}
-.ev-item.ev-normal{border-left:3px solid #29B6F6}
-.ev-item.ev-done{opacity:0.5;border-left:3px solid rgba(255,255,255,0.1)}
-.ev-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}
-.ev-meta{font-size:11px;color:var(--text-dim);margin-bottom:5px}
-.ev-badge{display:inline-flex;align-items:center;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
-.ev-badge.urgent{background:rgba(231,76,60,0.15);color:var(--red)}
-.ev-badge.soon{background:rgba(245,166,35,0.15);color:var(--sun)}
-.ev-badge.normal{background:rgba(41,182,246,0.12);color:#29B6F6}
-.ev-badge.done{background:rgba(255,255,255,0.07);color:var(--text-dim)}
-
 /* ── 달력 탭 레이아웃 ── */
 .cal-layout{display:flex;flex-direction:column;gap:14px}
-.cal-main{width:100%}
-.cal-side{width:100%}
+@media(min-width:800px){.cal-layout{flex-direction:row;align-items:flex-start}}
+.cal-main{width:100%;min-width:0}
+.cal-side{width:100%;min-width:0}
+@media(min-width:800px){.cal-main{flex:1.4}.cal-side{flex:1}}
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
 .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .cal-title{font-size:17px;font-weight:700;color:var(--sun)}
@@ -340,6 +275,19 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .cal-dot.work{background:rgba(41,182,246,0.2);color:#7EC8E3}
 .cal-dot.ev-dot{background:rgba(245,166,35,0.2);color:var(--sun)}
 .cal-dot.ev-dot.done{opacity:0.35}
+/* 공사현장 기간 색상 */
+.cal-dot.s0{background:rgba(46,184,92,0.28);color:rgba(120,230,150,1);font-weight:700}
+.cal-dot.s1{background:rgba(180,110,220,0.28);color:rgba(210,160,255,1);font-weight:700}
+.cal-dot.s2{background:rgba(231,76,60,0.25);color:rgba(255,130,120,1);font-weight:700}
+.cal-dot.s3{background:rgba(52,152,219,0.28);color:rgba(110,190,255,1);font-weight:700}
+.cal-dot.s4{background:rgba(230,126,34,0.28);color:rgba(255,180,80,1);font-weight:700}
+/* 공사현장 이벤트 (착공·종료일) */
+.cal-dot.ev-s0{background:rgba(46,184,92,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s1{background:rgba(155,89,182,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s2{background:rgba(231,76,60,0.85);color:#fff;font-weight:900}
+.cal-dot.ev-s3{background:rgba(52,152,219,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s4{background:rgba(230,126,34,0.9);color:#fff;font-weight:900}
+.cal-dot.ev-s0.done,.cal-dot.ev-s1.done,.cal-dot.ev-s2.done,.cal-dot.ev-s3.done,.cal-dot.ev-s4.done{opacity:0.4}
 .cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 .cal-legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim)}
 /* ── 날짜 클릭 팝업 ── */
@@ -354,6 +302,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 .ev-site-group{margin-bottom:14px}
 .ev-site-group-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.35);border-radius:var(--radius-sm) var(--radius-sm) 0 0;font-size:16px;font-weight:700;color:var(--sun)}
 .ev-site-group-body{border:1px solid rgba(245,166,35,0.15);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:8px}
+/* ── 이벤트 아이템 (최종) ── */
 .ev-item{background:var(--sky-dark);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:7px}
 .ev-item:last-child{margin-bottom:0}
 .ev-item.ev-urgent{border-left:3px solid var(--red)}
