@@ -3148,22 +3148,44 @@ function openPhotoViewer(url){
   document.getElementById('photo-viewer-dl-btn').dataset.dlname='';
   document.getElementById('photo-viewer-modal').classList.add('open');
 }
+async function downloadAsJpg(url, filename){
+  try{
+    const resp=await fetch(url);
+    const blob=await resp.blob();
+    const img=new Image();
+    const blobUrl=URL.createObjectURL(blob);
+    return new Promise(resolve=>{
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        canvas.width=img.naturalWidth; canvas.height=img.naturalHeight;
+        canvas.getContext('2d').drawImage(img,0,0);
+        canvas.toBlob(jpgBlob=>{
+          URL.revokeObjectURL(blobUrl);
+          const a=document.createElement('a');
+          a.href=URL.createObjectURL(jpgBlob);
+          a.download=(filename||'photo').replace(/\.webp$/i,'')+'.jpg';
+          a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+          resolve(true);
+        },'image/jpeg',0.95);
+      };
+      img.onerror=()=>{ URL.revokeObjectURL(blobUrl); resolve(false); };
+      img.src=blobUrl;
+    });
+  }catch(e){ return false; }
+}
+
 async function downloadViewerPhoto(){
   const btn=document.getElementById('photo-viewer-dl-btn');
   const url=btn.dataset.url;
   if(!url) return;
-  const dlname=btn.dataset.dlname;
-  if(dlname){
-    // 현장 도면/사진 — 파일명 있으면 anchor 직접 다운로드
-    const a=document.createElement('a');
-    a.href=url; a.download=dlname; a.target='_blank'; a.click();
-    return;
+  const dlname=(btn.dataset.dlname||'photo').replace(/\.webp$/i,'');
+  toast('다운로드 중...','');
+  const ok=await downloadAsJpg(url, dlname);
+  if(!ok){
+    // CORS 실패 시 직접 링크로 폴백
+    const a=document.createElement('a'); a.href=url; a.download=dlname+'.jpg'; a.target='_blank'; a.click();
   }
-  // 작업일지 사진 — blob 다운로드
-  const ext=url.split('?')[0].split('.').pop()||'jpg';
-  const filename='photo_'+Date.now()+'.'+ext;
-  const ok=await downloadPhotoAsBlob(url, filename);
-  if(!ok) toast('다운로드 실패','err');
 }
 function closePhotoViewer(){
   document.getElementById('photo-viewer-modal').classList.remove('open');
@@ -3205,13 +3227,18 @@ async function openEditSubLog(id){
 }
 // fetch → Blob URL 방식으로 크로스오리진 다운로드
 async function downloadPhotoAsBlob(url, filename){
+  // WebP → JPG 변환 후 다운로드
+  const jpgName=filename.replace(/\.webp$/i,'')+'.jpg';
+  const ok=await downloadAsJpg(url, jpgName.replace(/\.jpg\.jpg$/,'.jpg'));
+  if(ok) return true;
+  // 변환 실패 시 원본 직접 다운로드
   try{
     const res=await fetch(url);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const blob=await res.blob();
     const blobUrl=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=blobUrl; a.download=filename;
+    a.href=blobUrl; a.download=jpgName;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(blobUrl),1000);
