@@ -633,8 +633,8 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
   <div style="position:relative;max-width:92vw;max-height:88vh" onclick="event.stopPropagation()">
     <img id="photo-viewer-img" src="" style="max-width:92vw;max-height:82vh;object-fit:contain;border-radius:8px;display:block">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-      <button class="btn bs bsm" onclick="closePhotoViewer()">✕ 닫기</button>
-      <button class="btn bp bsm" id="photo-viewer-dl-btn" onclick="downloadViewerPhoto()">📥 다운로드</button>
+      <button class="btn bs bsm" onclick="event.stopPropagation();closePhotoViewer()">✕ 닫기</button>
+      <button class="btn bp bsm" id="photo-viewer-dl-btn" onclick="event.stopPropagation();downloadViewerPhoto()">📥 다운로드</button>
     </div>
   </div>
 </div>
@@ -2654,11 +2654,8 @@ function selectSite(id,name){
   localStorage.setItem('sel_site_name',name);
   updateHeaderSite(name);
   renderSiteList(); populateSiteSelects();
-  // 도면 패널 열려있으면 해당 현장으로 자동 전환
-  const panel=document.getElementById('site-doc-panel');
-  if(panel&&panel.style.display!=='none'){
-    openSiteDocs(id,name);
-  }
+  // 현장 선택 시 도면·사진 패널 자동 표시
+  openSiteDocs(id,name);
   initDateFilters().then(()=>{
     loadDashboard(); loadLogs(); loadSummary();
   });
@@ -2760,10 +2757,10 @@ async function renderSiteDocGrid(){
     return;
   }
   let html=docs.map(d=>`
-    <div class="site-doc-item" onclick="viewSiteDoc('${d.url}','${(d.name||'').replace(/'/g,"\\'")}')">
-      <img src="${d.url}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23223%22 width=%22100%22 height=%22100%22/><text y=%2260%22 x=%2250%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2230%22>📄</text></svg>'">
+    <div class="site-doc-item">
+      <img src="${d.url}" loading="lazy" onclick="viewSiteDoc('${d.url}','${(d.name||'').replace(/'/g,"\\'")}')" style="cursor:zoom-in" title="클릭하면 크게 보기" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23223%22 width=%22100%22 height=%22100%22/><text y=%2260%22 x=%2250%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2230%22>📄</text></svg>'">
       ${d.name?`<div class="site-doc-label">${d.name}</div>`:''}
-      <button class="site-doc-rm" onclick="event.stopPropagation();deleteSiteDoc(${d.id},this.closest('.site-doc-item'))">✕</button>
+      <button class="site-doc-rm" onclick="event.stopPropagation();deleteSiteDoc(${d.id},this.closest('.site-doc-item'))" title="삭제">✕</button>
     </div>`).join('');
   // 업로드 버튼
   html+=`<div class="site-doc-upload" onclick="document.getElementById('site-doc-file').click()">
@@ -2801,9 +2798,14 @@ function viewSiteDoc(url, name){
   const img=document.getElementById('photo-viewer-img');
   const dlBtn=document.getElementById('photo-viewer-dl-btn');
   if(img) img.src=url;
-  if(dlBtn){ dlBtn.onclick=()=>{ const a=document.createElement('a');a.href=url;a.download=name||'사진';a.target='_blank';a.click(); }; }
-  document.getElementById('photo-viewer-modal').style.display='flex';
+  if(dlBtn){
+    dlBtn.dataset.url=url;
+    dlBtn.dataset.dlname=name||'사진';
+  }
+  document.getElementById('photo-viewer-modal').classList.add('open');
 }
+
+function openSiteDocViewer(url, name){ viewSiteDoc(url, name); }
 
 function toggleSiteComplete(){
   const cur=document.getElementById('es-is-completed').value==='1';
@@ -3143,11 +3145,21 @@ async function exportCSV(){
 function openPhotoViewer(url){
   document.getElementById('photo-viewer-img').src=url;
   document.getElementById('photo-viewer-dl-btn').dataset.url=url;
+  document.getElementById('photo-viewer-dl-btn').dataset.dlname='';
   document.getElementById('photo-viewer-modal').classList.add('open');
 }
 async function downloadViewerPhoto(){
-  const url=document.getElementById('photo-viewer-dl-btn').dataset.url;
+  const btn=document.getElementById('photo-viewer-dl-btn');
+  const url=btn.dataset.url;
   if(!url) return;
+  const dlname=btn.dataset.dlname;
+  if(dlname){
+    // 현장 도면/사진 — 파일명 있으면 anchor 직접 다운로드
+    const a=document.createElement('a');
+    a.href=url; a.download=dlname; a.target='_blank'; a.click();
+    return;
+  }
+  // 작업일지 사진 — blob 다운로드
   const ext=url.split('?')[0].split('.').pop()||'jpg';
   const filename='photo_'+Date.now()+'.'+ext;
   const ok=await downloadPhotoAsBlob(url, filename);
