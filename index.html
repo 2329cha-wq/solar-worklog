@@ -1730,6 +1730,7 @@ function addSubRow(cid, data={}){
   div.id=`sr-${sid}`;
   div.style.cssText='background:var(--sky-dark);border:1px solid rgba(255,255,255,0.07);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px';
   div.innerHTML=`
+    <input type="hidden" id="srl-${sid}" value="${(data&&data._id)||''}">
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <select class="fs sr-cat-sel" id="src-${sid}" style="flex:1">
         <option value="">소분류 선택</option>${subOpts}
@@ -2176,7 +2177,8 @@ async function saveLog(){
       if(!md){ toast(`${cat} > ${sub}: 인원/시간을 입력하세요`,'err'); return; }
       const pIdx=payloads.length;
       const mats=getMatRows(sid);
-      payloads.push({work_date:date,category:cat,sub_category:sub,
+      const existingLogId=document.getElementById(`srl-${sid}`)?.value||null;
+      payloads.push({_existingId:existingLogId||null, work_date:date,category:cat,sub_category:sub,
         detail:document.getElementById(`srd-${sid}`)?.value||'',
         manday:md, workers:parseInt(document.getElementById(`srw-${sid}`)?.value)||null,
         materials:mats.length?JSON.stringify(mats):null,
@@ -2189,25 +2191,49 @@ async function saveLog(){
   if(editId && editId.startsWith('SUB:')){
     // 소분류 단건 수정
     const subId=editId.replace('SUB:','');
-    const{error}=await sbClient.from('daily_logs').update(payloads[0]).eq('id',subId);
+    const p={...payloads[0]}; delete p._existingId;
+    const{error}=await sbClient.from('daily_logs').update(p).eq('id',subId);
     if(error){ toast('수정 실패: '+error.message,'err'); return; }
     for(const pm of photoMap){ if(pm.pIdx===0) await uploadCatPhotos(subId,pm.cid); }
   } else if(editId && editId.startsWith('DATE:')){
-    // 날짜 전체 수정: 삭제 후 재삽입
+    // 날짜 전체 수정: _existingId 있으면 UPDATE, 없으면 INSERT (기존 사진 보존)
     const editDate=editId.replace('DATE:','');
-    const{error:delErr}=await sbClient.from('daily_logs').delete().eq('work_date',editDate);
-    if(delErr){ toast('수정 실패: '+delErr.message,'err'); return; }
+    const{data:existingLogs}=await sbClient.from('daily_logs').select('id').eq('work_date',editDate);
+    const existingIds=new Set((existingLogs||[]).map(l=>l.id));
+    const usedIds=new Set();
     const insertedIds=[];
+
     for(let i=0;i<payloads.length;i++){
-      const{data,error}=await sbClient.from('daily_logs').insert(payloads[i]).select().single();
-      if(error){ toast('저장 실패: '+error.message,'err'); return; }
-      insertedIds.push(data.id);
+      const p={...payloads[i]};
+      const eid=p._existingId?parseInt(p._existingId):null;
+      delete p._existingId; // DB에 보내기 전 제거
+
+      if(eid && existingIds.has(eid)){
+        // 기존 레코드 UPDATE → 사진 유지
+        const{error}=await sbClient.from('daily_logs').update(p).eq('id',eid);
+        if(error){ toast('수정 실패: '+error.message,'err'); return; }
+        insertedIds.push(eid);
+        usedIds.add(eid);
+      } else {
+        // 새 카드 추가된 경우 INSERT
+        const{data,error}=await sbClient.from('daily_logs').insert(p).select().single();
+        if(error){ toast('저장 실패: '+error.message,'err'); return; }
+        insertedIds.push(data.id);
+      }
     }
+    // 기존에 있었지만 카드가 삭제된 레코드 → photos 먼저 삭제 후 log 삭제
+    const removedIds=[...existingIds].filter(id=>!usedIds.has(id));
+    for(const rid of removedIds){
+      await sbClient.from('photos').delete().eq('log_id',rid);
+      await sbClient.from('daily_logs').delete().eq('id',rid);
+    }
+    // 새로 추가된 사진만 업로드
     for(const pm of photoMap){ await uploadCatPhotos(insertedIds[pm.pIdx],pm.cid); }
   } else {
     const insertedIds=[];
     for(let i=0;i<payloads.length;i++){
-      const{data,error}=await sbClient.from('daily_logs').insert(payloads[i]).select().single();
+      const p={...payloads[i]}; delete p._existingId;
+      const{data,error}=await sbClient.from('daily_logs').insert(p).select().single();
       if(error){ toast('저장 실패: '+error.message,'err'); return; }
       insertedIds.push(data.id);
     }
