@@ -715,6 +715,14 @@ async function loadAll(){
   const sid=localStorage.getItem('sel_site_id');
   const sname=localStorage.getItem('sel_site_name');
   if(sid&&sname){ currentSiteId=parseInt(sid); updateHeaderSite(sname); }
+  // is_completed 컬럼 존재 여부 확인 (없으면 경고)
+  try{
+    const{error:colErr}=await sbClient.from('sites').select('is_completed').limit(1);
+    if(colErr&&colErr.message&&colErr.message.includes('is_completed')){
+      console.warn('⚠️ sites 테이블에 is_completed 컬럼이 없습니다. Supabase SQL 편집기에서 실행하세요:\nALTER TABLE sites ADD COLUMN IF NOT EXISTS is_completed boolean DEFAULT false;');
+      document.getElementById('dash-content').innerHTML+='<div class="config-warn" style="margin-top:8px">⚠️ DB 업그레이드 필요: Supabase SQL 편집기에서<br><code style="font-size:11px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:3px">ALTER TABLE sites ADD COLUMN IF NOT EXISTS is_completed boolean DEFAULT false;</code><br>실행 후 새로고침하세요.</div>';
+    }
+  }catch(e){}
   await Promise.all([loadWorkTypes(), loadSites()]);
   await initDateFilters();
   loadDashboard(); loadLogs(); loadSummary();
@@ -2566,8 +2574,9 @@ async function deleteSite(id){
   await loadSites(); toast('삭제됨','ok');
 }
 function openEditSite(id){
-  const s=sites.find(x=>x.id===id); if(!s) return;
-  document.getElementById('es-id').value=s.id;
+  const numId=parseInt(id);
+  const s=sites.find(x=>x.id===numId||x.id==numId); if(!s) { toast('현장 정보를 찾을 수 없습니다','err'); return; }
+  document.getElementById('es-id').value=numId;
   document.getElementById('es-name').value=s.name||'';
   document.getElementById('es-client').value=s.client||'';
   document.getElementById('es-contractor').value=s.contractor||'';
@@ -2603,23 +2612,50 @@ function toggleSiteComplete(){
   }
 }
 async function saveEditSite(){
-  const id=document.getElementById('es-id').value;
+  const id=parseInt(document.getElementById('es-id').value);
   const name=document.getElementById('es-name').value.trim();
   if(!name){ toast('현장명을 입력하세요','err'); return; }
   const isCompleted=document.getElementById('es-is-completed').value==='1';
-  const{error}=await sbClient.from('sites').update({
+  const startDate=document.getElementById('es-start').value||null;
+  const endDate=document.getElementById('es-end').value||null;
+
+  // is_completed 컬럼 없을 경우 대비 - 먼저 기본 필드만 업데이트 시도
+  const updatePayload={
     name,
     client:document.getElementById('es-client').value.trim(),
     contractor:document.getElementById('es-contractor').value.trim(),
     location:document.getElementById('es-location').value.trim(),
-    start_date:document.getElementById('es-start').value||null,
-    end_date:document.getElementById('es-end').value||null,
+    start_date:startDate,
+    end_date:endDate,
     is_completed:isCompleted
-  }).eq('id',id);
-  if(error){ toast('수정 실패','err'); return; }
-  if(id==currentSiteId){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
+  };
+  const{error}=await sbClient.from('sites').update(updatePayload).eq('id',id);
+  if(error){
+    // is_completed 컬럼 없으면 제외하고 재시도
+    if(error.message&&error.message.includes('is_completed')){
+      const{error:e2}=await sbClient.from('sites').update({
+        name,
+        client:document.getElementById('es-client').value.trim(),
+        contractor:document.getElementById('es-contractor').value.trim(),
+        location:document.getElementById('es-location').value.trim(),
+        start_date:startDate,
+        end_date:endDate
+      }).eq('id',id);
+      if(e2){ toast('수정 실패: '+e2.message,'err'); return; }
+      toast('⚠️ 저장됨 (is_completed 컬럼 없음 - DB에 추가 필요)','');
+    } else {
+      toast('수정 실패: '+error.message,'err'); return;
+    }
+  } else {
+    toast('수정됨 ✓','ok');
+  }
+  if(id==currentSiteId||id===currentSiteId){ localStorage.setItem('sel_site_name',name); updateHeaderSite(name); }
   document.getElementById('edit-site-modal').classList.remove('open');
-  await loadSites(); toast('수정됨 ✓','ok');
+  // sites 배열 갱신 후 달력도 함께 새로고침
+  await loadSites();
+  if(document.getElementById('view-calendar')?.classList.contains('active')){
+    loadCalendarTab();
+  }
 }
 
 // ═══════════════════════════════════════════
