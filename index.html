@@ -674,6 +674,7 @@ body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--sky-da
 // 전역 상태
 // ═══════════════════════════════════════════
 let sbClient=null, workTypes=[], sites=[], selectedPhotos=[], currentSiteId=null;
+let lastEditedDate=null; // 마지막 수정/저장한 작업일지 날짜
 
 // ── 설정 ──
 function loadConfig(){
@@ -837,11 +838,17 @@ async function initDateFilters(){
 
 // ── 탭 ──
 function switchTab(tab){
+  const prevTab=document.querySelector('.tab-btn.active')?.id?.replace('tab-','');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+tab).classList.add('active');
   document.getElementById('tab-'+tab).classList.add('active');
   if(tab==='calendar') loadCalendarTab();
+  // 다른 탭에서 작업일지 탭으로 돌아오면 lastEditedDate 초기화 → 최신 날짜 펼침
+  if(tab==='logs' && prevTab && prevTab!=='logs'){
+    lastEditedDate=null;
+    loadLogs();
+  }
 }
 
 function updateHeaderSite(name){
@@ -1398,7 +1405,15 @@ async function revertEvent(id){
 
 function buildPlanHtml(sitePlans, actualByCategory){
   let inner = '';
-  if(sitePlans.length===0){
+  // 계획에 등록된 카테고리 목록
+  const plannedCats=new Set(sitePlans.map(p=>p.category));
+  // 계획에 없는 실적 카테고리 (기타)
+  const etcItems=Object.entries(actualByCategory)
+    .filter(([cat])=>!plannedCats.has(cat)&&cat)
+    .map(([cat,md])=>({cat,md}));
+  const etcTotal=etcItems.reduce((s,x)=>s+x.md,0);
+
+  if(sitePlans.length===0 && etcItems.length===0){
     inner = '<div class="empty"><div class="empty-icon">📭</div>작업 계획을 추가해보세요</div>';
   } else {
     let rows = '';
@@ -1446,7 +1461,26 @@ function buildPlanHtml(sitePlans, actualByCategory){
         + '<button class="btn bd bsm" onclick="deletePlan('+p.id+')">삭제</button>'
         + '</div></div></div>';
     });
-    inner = '<div id="plan-list-sortable">'+rows+'</div>';
+
+    // ── 기타 (계획 외 실적) ──
+    let etcHtml = '';
+    if(etcItems.length>0){
+      const etcRows=etcItems.map(x=>
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">'
+        +'<span style="font-size:12px;color:var(--text)">'+x.cat+'</span>'
+        +'<span style="font-size:12px;color:var(--text-dim)"><strong style="color:#29B6F6">'+x.md.toFixed(2)+'</strong> M/D</span>'
+        +'</div>'
+      ).join('');
+      etcHtml='<div class="plan-item" style="cursor:default;border-left:3px solid rgba(255,255,255,0.2);margin-top:6px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<span style="font-size:13px;font-weight:700;color:var(--text-dim)">📋 기타 (계획 외 실적)</span>'
+        +'<span style="font-size:12px;background:rgba(255,255,255,0.08);border-radius:10px;padding:2px 9px;color:var(--text-dim)">합계 <strong style="color:var(--text)">'+etcTotal.toFixed(2)+'</strong> M/D</span>'
+        +'</div>'
+        +etcRows
+        +'</div>';
+    }
+
+    inner = '<div id="plan-list-sortable">'+rows+'</div>'+etcHtml;
   }
   return '<div class="card">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
@@ -1492,13 +1526,15 @@ async function saveComplete(){
 // ═══════════════════════════════════════════
 async function loadLogs(){
   if(!sbClient) return;
+  // 현재 스크롤 위치 기억
+  const logsView=document.getElementById('view-logs');
+  const scrollY=logsView?logsView.scrollTop:window.scrollY;
+
   let q=sbClient.from('daily_logs').select('*,photos(id,url)').order('work_date',{ascending:false});
   const from=document.getElementById('log-filter-from')?.value;
   const to=document.getElementById('log-filter-to')?.value;
   if(from) q=q.gte('work_date',from);
   if(to) q=q.lte('work_date',to);
-  if(currentSiteId){ const sn=sites.find(s=>s.id===currentSiteId)?.name; if(sn) q=q.eq('site_name',sn); }
-  // 현장 필터
   if(currentSiteId){ const sn=sites.find(s=>s.id===currentSiteId)?.name; if(sn) q=q.eq('site_name',sn); }
   const{data:logs,error}=await q;
   const el=document.getElementById('logs-content');
@@ -1515,6 +1551,8 @@ async function loadLogs(){
   });
 
   const dateKeys=Object.keys(groups);
+  // 펼칠 날짜: 최근 수정한 날짜 우선, 없으면 가장 최신 날짜
+  const expandDate=lastEditedDate&&groups[lastEditedDate]?lastEditedDate:dateKeys[0];
 
   el.innerHTML=dateKeys.map((date,dateIdx)=>{
     const items=groups[date];
@@ -1523,7 +1561,7 @@ async function loadLogs(){
     const cats=[...new Set(items.map(l=>l.category))].join(', ');
     const manager=items[0].manager||'';
     const weather=items[0].weather||'';
-    const isLatest=(dateIdx===0);
+    const isLatest=(date===expandDate);
 
     // 대분류별 그룹핑
     const catGroups={};
@@ -1598,11 +1636,14 @@ async function loadLogs(){
     const allDatePhotos=items.flatMap(l=>l.photos||[]);
     const totalPhotoCount=allDatePhotos.length;
     const timeStr=startT&&endT?`${startT} ~ ${endT}`:'';
-    return `<div class="log-group">
+    const DAYS=['일','월','화','수','목','금','토'];
+    const dow=DAYS[new Date(date+'T00:00:00').getDay()];
+    const dowColor=dow==='일'?'color:#e74c3c':dow==='토'?'color:#3498db':'color:var(--text-dim)';
+    return `<div class="log-group" id="lg-${date}">
       <div class="log-group-header" onclick="toggleLogGroup(this)">
         <div style="flex:1;min-width:0">
           <!-- 날짜 (최우선) -->
-          <div class="log-group-date">${date} ${weather}</div>
+          <div class="log-group-date">${date} <span style="font-size:16px;font-weight:700;${dowColor}">(${dow})</span> ${weather}</div>
           <!-- M/D + 인원 + 시간 (핵심 정보) -->
           <div class="log-group-summary">📊 총 ${totalMd.toFixed(2)} M/D · 👷 ${maxWorkers}명${manager?' · '+manager:''}</div>
           ${timeStr?`<div class="log-group-time">⏱ ${timeStr}</div>`:''}
@@ -1621,6 +1662,21 @@ async function loadLogs(){
       <div class="log-group-body" style="display:${isLatest?'block':'none'}">${catBlocksHtml}</div>
     </div>`;
   }).join('');
+
+  // 스크롤 복원 or 수정한 날짜로 이동
+  requestAnimationFrame(()=>{
+    if(lastEditedDate&&groups[lastEditedDate]){
+      // 수정한 날짜 카드로 스크롤
+      const targetEl=document.getElementById('lg-'+lastEditedDate);
+      if(targetEl){
+        targetEl.scrollIntoView({behavior:'smooth',block:'start'});
+        return;
+      }
+    }
+    // 수정 없으면 이전 스크롤 위치 복원
+    if(logsView) logsView.scrollTop=scrollY;
+    else window.scrollTo(0,scrollY);
+  });
 }
 
 function toggleLogGroup(header){
@@ -1654,6 +1710,7 @@ async function saveDateGroupEdit(){
   if(error){ toast('수정 실패: '+error.message,'err'); return; }
   document.getElementById('date-group-edit-modal').classList.remove('open');
   toast('수정됨 ✓','ok');
+  lastEditedDate=date;
   loadLogs();
 }
 
@@ -2034,7 +2091,10 @@ function openLogModal(){
     const el=document.getElementById(id);
     if(el) el.oninput=()=>syncAllSubHours();
   });
-  document.getElementById('log-modal').classList.add('open');
+  const logModal=document.getElementById('log-modal');
+  logModal.classList.add('open');
+  // 모달 내부 스크롤 상단으로
+  requestAnimationFrame(()=>{ const m=logModal.querySelector('.modal'); if(m) m.scrollTop=0; });
 }
 
 function updateTimeDisplay(){
@@ -2060,8 +2120,10 @@ function syncAllSubHours(){
   if(!s||!e) return;
   const [sh,sm]=s.split(':').map(Number);
   const [eh,em]=e.split(':').map(Number);
-  const diffH=Math.round(((eh*60+em)-(sh*60+sm))/60*100)/100;
-  if(diffH<=0) return;
+  const totalH=Math.round(((eh*60+em)-(sh*60+sm))/60*100)/100;
+  if(totalH<=0) return;
+  // 점심시간 1시간 제외 (실제 작업시간 기준으로 공수 계산)
+  const diffH=Math.max(totalH-1, 0.5);
   document.querySelectorAll('#work-rows [id^="srh-"]').forEach(el=>{
     const sid=el.id.replace('srh-','');
     const srEl=document.getElementById('sr-'+sid);
@@ -2143,7 +2205,9 @@ async function openEditLog(id){
     const el=document.getElementById(elid);
     if(el) el.oninput=()=>syncAllSubHours();
   });
-  document.getElementById('log-modal').classList.add('open');
+  const logModalEdit=document.getElementById('log-modal');
+  logModalEdit.classList.add('open');
+  requestAnimationFrame(()=>{ const m=logModalEdit.querySelector('.modal'); if(m) m.scrollTop=0; });
 }
 
 
@@ -2251,6 +2315,7 @@ async function saveLog(){
   const hasPhotos=Object.values(rowPhotos).some(arr=>arr&&arr.filter(p=>p).length>0);
   if(hasPhotos) toast('사진 업로드 중...','');
   closeLogModal();
+  lastEditedDate=date;
   toast(`${payloads.length}개 작업 저장 완료 ✓`,'ok');
   initDateFilters().then(()=>{ loadLogs(); loadDashboard(); loadSummary(); });
 }
@@ -2979,10 +3044,10 @@ async function openEditSubLog(id){
     const el=document.getElementById(elid);
     if(el) el.oninput=()=>syncAllSubHours();
   });
-  document.getElementById('log-modal').classList.add('open');
+  const logModalSub=document.getElementById('log-modal');
+  logModalSub.classList.add('open');
+  requestAnimationFrame(()=>{ const m=logModalSub.querySelector('.modal'); if(m) m.scrollTop=0; });
 }
-
-// 날짜(+대분류 옵션) 사진 다운로드
 // fetch → Blob URL 방식으로 크로스오리진 다운로드
 async function downloadPhotoAsBlob(url, filename){
   try{
